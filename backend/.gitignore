@@ -1,0 +1,7 @@
+*~
+*.swp
+.amp/
+.claude/
+.codex/
+.idea/
+.vscode/
