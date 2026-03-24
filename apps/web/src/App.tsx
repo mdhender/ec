@@ -1,35 +1,88 @@
 import { useEffect, useState } from "react";
-import { HomeIcon, UsersIcon } from "@heroicons/react/24/outline";
-import { getToken, clearToken } from "./lib/auth";
-import { fetchProfile } from "./lib/api";
+import {
+  HomeIcon,
+  DocumentTextIcon,
+  ClipboardDocumentListIcon,
+} from "@heroicons/react/24/outline";
+import { clearToken } from "./lib/auth";
+import { fetchMe, loginWithMagicLink } from "./lib/api";
 import AppShell from "./components/AppShell";
-import LoginPage from "./pages/LoginPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
+import DashboardPage from "./pages/DashboardPage";
+import OrdersPage from "./pages/OrdersPage";
+import ReportsPage from "./pages/ReportsPage";
+import ReportPage from "./pages/ReportPage";
 import type { NavItem } from "./components/AppShell";
-import type { Profile } from "./lib/types";
 
-type Page = "dashboard" | "admin-users";
+type Page = "dashboard" | "orders" | "reports" | "report" | "admin-users";
+
+function ClusterUnderConstruction() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-950">
+      <div className="text-center px-6">
+        <p className="text-indigo-400 text-sm font-mono uppercase tracking-widest mb-4">
+          Epimethean Challenge
+        </p>
+        <h1 className="text-4xl font-bold text-white mb-3">
+          Cluster Under Construction
+        </h1>
+        <p className="text-gray-400 max-w-sm mx-auto">
+          The cluster is not yet open to travelers. Check your mission briefing
+          for access instructions.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 function App() {
-  const [authenticated, setAuthenticated] = useState(() => !!getToken());
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [empireNo, setEmpireNo] = useState(0);
+  const [empireName, setEmpireName] = useState("");
   const [page, setPage] = useState<Page>("dashboard");
+  const [reportLink, setReportLink] = useState("");
 
   useEffect(() => {
-    if (!authenticated) return;
-    fetchProfile()
-      .then(setProfile)
-      .catch(() => {
-        clearToken();
-        setAuthenticated(false);
-      });
-  }, [authenticated]);
+    async function init() {
+      // Handle magic link in URL: ?magic=<token>
+      const params = new URLSearchParams(window.location.search);
+      const magic = params.get("magic");
+      if (magic) {
+        try {
+          await loginWithMagicLink(magic);
+          // Remove magic param from URL without reload
+          params.delete("magic");
+          const newSearch = params.toString();
+          const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "");
+          window.history.replaceState({}, "", newUrl);
+        } catch {
+          // Invalid magic link — fall through to /me check
+        }
+      }
+
+      // Check auth status via /api/me
+      try {
+        const me = await fetchMe();
+        if (me.authenticated) {
+          setEmpireNo(me.empire);
+          setEmpireName(me.name);
+          setAuthenticated(true);
+        }
+      } catch {
+        // Network error or server down — stay unauthenticated
+      }
+      setLoading(false);
+    }
+    init();
+  }, []);
 
   function handleSignOut() {
     clearToken();
-    setProfile(null);
-    setPage("dashboard");
     setAuthenticated(false);
+    setEmpireNo(0);
+    setEmpireName("");
+    setPage("dashboard");
   }
 
   const userNavigation = [
@@ -44,34 +97,72 @@ function App() {
       current: page === "dashboard",
       onClick: () => setPage("dashboard"),
     },
-    ...(profile?.role === "admin"
-      ? [
-          {
-            name: "Users",
-            href: "#",
-            icon: UsersIcon,
-            current: page === "admin-users",
-            onClick: () => setPage("admin-users"),
-          } satisfies NavItem,
-        ]
-      : []),
+    {
+      name: "Orders",
+      href: "#",
+      icon: ClipboardDocumentListIcon,
+      current: page === "orders",
+      onClick: () => setPage("orders"),
+    },
+    {
+      name: "Reports",
+      href: "#",
+      icon: DocumentTextIcon,
+      current: page === "reports" || page === "report",
+      onClick: () => setPage("reports"),
+    },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <p className="text-gray-400 font-mono text-sm">Connecting…</p>
+      </div>
+    );
+  }
+
   if (!authenticated) {
-    return <LoginPage onLogin={() => setAuthenticated(true)} />;
+    return <ClusterUnderConstruction />;
+  }
+
+  function renderPage() {
+    switch (page) {
+      case "orders":
+        return <OrdersPage empireNo={empireNo} />;
+      case "reports":
+        return (
+          <ReportsPage
+            empireNo={empireNo}
+            onSelectReport={(link) => {
+              setReportLink(link);
+              setPage("report");
+            }}
+          />
+        );
+      case "report":
+        return (
+          <ReportPage link={reportLink} onBack={() => setPage("reports")} />
+        );
+      case "admin-users":
+        return <AdminUsersPage />;
+      default:
+        return (
+          <DashboardPage
+            empireName={empireName}
+            onNavigateOrders={() => setPage("orders")}
+            onNavigateReports={() => setPage("reports")}
+          />
+        );
+    }
   }
 
   return (
     <AppShell
       navigation={navigation}
       userNavigation={userNavigation}
-      userName={profile?.handle ?? ""}
+      userName={empireName}
     >
-      {page === "admin-users" ? (
-        <AdminUsersPage />
-      ) : (
-        <p className="text-lg text-gray-700">Dashboard</p>
-      )}
+      {renderPage()}
     </AppShell>
   );
 }

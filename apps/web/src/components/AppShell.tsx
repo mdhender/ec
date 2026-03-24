@@ -127,13 +127,13 @@ export default function AppShell({
         </div>
       </Dialog>
 
-      {/* Static narrow sidebar for desktop */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-20 lg:overflow-y-auto lg:bg-gray-900 lg:pb-4">
+      {/* Static sidebar for desktop */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-48 lg:overflow-y-auto lg:bg-gray-900 lg:pb-4">
         <div className="flex h-16 shrink-0 items-center justify-center">
           <span className="text-lg font-bold text-white">EC</span>
         </div>
-        <nav className="mt-8">
-          <ul role="list" className="flex flex-col items-center space-y-1">
+        <nav className="mt-8 px-3">
+          <ul role="list" className="flex flex-col space-y-1">
             {navigation.map((item) => (
               <li key={item.name}>
                 <a
@@ -147,7 +147,7 @@ export default function AppShell({
                   )}
                 >
                   <item.icon aria-hidden="true" className="size-6 shrink-0" />
-                  <span className="sr-only">{item.name}</span>
+                  {item.name}
                 </a>
               </li>
             ))}
@@ -155,7 +155,7 @@ export default function AppShell({
         </nav>
       </div>
 
-      <div className="lg:pl-20">
+      <div className="lg:pl-48">
         {/* Header */}
         <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-xs sm:gap-x-6 sm:px-6 lg:px-8">
           <button

@@ -9,6 +9,18 @@ export interface LoginResponse {
   token: string;
 }
 
+export interface MeResponse {
+  empire: number;
+  authenticated: boolean;
+  name: string;
+}
+
+export interface ReportSummary {
+  turn_year: number;
+  turn_quarter: number;
+  link: string;
+}
+
 export interface Empire {
   id: string;
   name: string;
