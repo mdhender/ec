@@ -39,7 +39,7 @@ content/
 - Leaf pages are named with kebab-case (e.g., `first-turn.md`).
 - Use Hextra shortcodes: `{{< callout >}}`, `{{< cards >}}`, `{{< card >}}`, `{{< tabs >}}`, `{{< tab >}}`.
 - Historical content under `history/` should stay faithful to the original source text.
-- Use the Diátaxis skill (`skills/diataxis/`) when writing or reviewing documentation.
+- Use the Diátaxis skill when writing or reviewing documentation.
 
 ## Build & Preview
 

@@ -16,7 +16,7 @@ IMPORTANT: Prefer retrieval-led reasoning over pre-training-led reasoning for an
 
 ## Source of Truth
 
-All reference files below are symlinked from the Diataxis repo and always reflect the latest content. Read them for authoritative guidance.
+All reference files below are copies from the Diataxis repo. Read them for authoritative guidance.
 
 ## Compressed Index
 
