@@ -87,10 +87,15 @@ func (s *Server) Start() error {
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
 
+	tokenValidator := func(token string) (int, error) {
+		return jwtMgr.Validate(token)
+	}
+
 	deliveryhttp.AddRoutes(
 		e,
 		jwtMgr.Middleware(),
 		empireExtractor,
+		tokenValidator,
 		loginSvc,
 		fileStore,
 		fileStore,

@@ -5,6 +5,7 @@ package http
 import (
 	"crypto/subtle"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -50,6 +51,35 @@ func PostLogin(loginSvc *app.LoginService) func(c *echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]any{
 			"access_token": token,
 			"token_type":   "Bearer",
+		})
+	}
+}
+
+// TokenValidator validates a raw JWT string and returns the empire number.
+// Returns 0 and an error if the token is invalid.
+type TokenValidator func(token string) (empireNo int, err error)
+
+// GetMe returns the identity of the current user.
+// If the request carries a valid Bearer token, empire is the token's subject and
+// name is "Empire <n>". Otherwise, empire is 0 and name is "guest".
+func GetMe(validate TokenValidator) func(c *echo.Context) error {
+	return func(c *echo.Context) error {
+		empire := 0
+		authenticated := false
+		name := "guest"
+
+		if h := c.Request().Header.Get("Authorization"); len(h) > 7 && h[:7] == "Bearer " {
+			if empireNo, err := validate(h[7:]); err == nil && empireNo > 0 {
+				empire = empireNo
+				authenticated = true
+				name = fmt.Sprintf("Empire %d", empireNo)
+			}
+		}
+
+		return c.JSON(http.StatusOK, map[string]any{
+			"empire":        empire,
+			"authenticated": authenticated,
+			"name":          name,
 		})
 	}
 }

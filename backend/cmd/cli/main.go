@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mdhender/ec"
 	"github.com/mdhender/ec/internal/dotfiles"
@@ -106,6 +107,36 @@ func main() {
 		fmt.Printf("error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// resolveDuration returns the flag value if explicitly set, otherwise
+// parses the env var, otherwise returns the fallback.
+func resolveDuration(cmd *cobra.Command, flagName, envVar string, fallback time.Duration) (time.Duration, error) {
+	if cmd.Flags().Changed(flagName) {
+		return cmd.Flags().GetDuration(flagName)
+	}
+	if v := os.Getenv(envVar); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return 0, fmt.Errorf("--%s: invalid duration %q from %s: %w", flagName, v, envVar, err)
+		}
+		return d, nil
+	}
+	return fallback, nil
+}
+
+// resolveString returns the flag value if the flag was explicitly set,
+// otherwise the env var value, otherwise the fallback.
+// Priority: flag → env → fallback.
+func resolveString(cmd *cobra.Command, flagName, envVar, fallback string) string {
+	if cmd.Flags().Changed(flagName) {
+		v, _ := cmd.Flags().GetString(flagName)
+		return v
+	}
+	if v := os.Getenv(envVar); v != "" {
+		return v
+	}
+	return fallback
 }
 
 func cmdShow() *cobra.Command {

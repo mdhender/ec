@@ -13,6 +13,7 @@ func AddRoutes(
 	e *echo.Echo,
 	jwtMiddleware echo.MiddlewareFunc,
 	empireExtractor EmpireExtractor,
+	tokenValidator TokenValidator,
 	loginSvc *app.LoginService,
 	orderStore app.OrderStore,
 	reportStore app.ReportStore,
@@ -22,6 +23,7 @@ func AddRoutes(
 ) {
 	// Public routes
 	e.GET("/api/health", GetHealth())
+	e.GET("/api/me", GetMe(tokenValidator))
 	e.POST("/api/login/:magicLink", PostLogin(loginSvc))
 	e.POST("/api/logout", PostLogout())
 
