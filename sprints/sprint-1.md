@@ -108,9 +108,9 @@ const (
 ```
 
 **Acceptance criteria:**
-- [ ] File compiles: `go build ./internal/cerr/...`
-- [ ] All constants are of type `cerr.Error`
-- [ ] No imports of outer layers
+- [x] File compiles: `go build ./internal/cerr/...`
+- [x] All constants are of type `cerr.Error`
+- [x] No imports of outer layers
 
 **Tests to add/update:**
 - `TestErrorsImplementError` in `backend/internal/cerr/errors_test.go` — verify each constant satisfies the `error` interface and `.Error()` returns the expected string
@@ -164,9 +164,9 @@ type ReportMeta struct {
 Only import `context` and standard library. Do not import `cerr` (errors from infra adapters will be wrapped or mapped in delivery).
 
 **Acceptance criteria:**
-- [ ] File compiles: `go build ./internal/app/...`
-- [ ] No imports of `infra`, `delivery`, `runtime`, Echo, or JWT packages
-- [ ] All four interfaces are exported
+- [x] File compiles: `go build ./internal/app/...`
+- [x] No imports of `infra`, `delivery`, `runtime`, Echo, or JWT packages
+- [x] All four interfaces are exported
 
 **Tests to add/update:**
 - No tests needed — these are interface definitions only
@@ -199,10 +199,10 @@ Also add a `Middleware() echo.MiddlewareFunc` method that returns `echo-jwt` mid
 Also add a `FromContext(c *echo.Context) (empireNo int, ok bool)` helper that extracts the empire number from a validated JWT in the Echo context.
 
 **Acceptance criteria:**
-- [ ] File compiles: `go build ./internal/infra/auth/...`
-- [ ] `JWTManager` satisfies `app.TokenSigner` interface
-- [ ] Issued tokens can be validated back to the original empireNo
-- [ ] Expired tokens return an error from `Validate`
+- [x] File compiles: `go build ./internal/infra/auth/...`
+- [x] `JWTManager` satisfies `app.TokenSigner` interface
+- [x] Issued tokens can be validated back to the original empireNo
+- [x] Expired tokens return an error from `Validate`
 
 **Tests to add/update:**
 - `TestJWTRoundTrip` in `backend/internal/infra/auth/jwt_test.go` — issue a token and validate it, verify empireNo matches
@@ -234,11 +234,11 @@ Constructor: `NewMagicLinkStore(path string) (*MagicLinkStore, error)` — reads
 `ValidateMagicLink(ctx, magicLink)` — uses `crypto/subtle.ConstantTimeCompare` to compare the provided magic link against each stored key. Returns the empire number on match. Returns `0, false, nil` on no match.
 
 **Acceptance criteria:**
-- [ ] File compiles: `go build ./internal/infra/auth/...`
-- [ ] `MagicLinkStore` satisfies `app.AuthStore` interface
-- [ ] Valid magic link returns correct empire number
-- [ ] Invalid magic link returns `false` without error
-- [ ] Invalid JSON file path returns error from constructor
+- [x] File compiles: `go build ./internal/infra/auth/...`
+- [x] `MagicLinkStore` satisfies `app.AuthStore` interface
+- [x] Valid magic link returns correct empire number
+- [x] Invalid magic link returns `false` without error
+- [x] Invalid JSON file path returns error from constructor
 
 **Tests to add/update:**
 - `TestMagicLinkValid` in `backend/internal/infra/auth/magiclinks_test.go` — write a temp JSON file, load it, validate a known link
@@ -269,12 +269,12 @@ Constructor: `NewStore(dataPath string) *Store` — stores the base data path.
 Empire numbers must be formatted as integers with no padding (e.g., `42`, not `0042`).
 
 **Acceptance criteria:**
-- [ ] File compiles: `go build ./internal/infra/filestore/...`
-- [ ] `Store` satisfies both `app.OrderStore` and `app.ReportStore`
-- [ ] `PutOrders` followed by `GetOrders` round-trips correctly
-- [ ] `GetOrders` on missing file returns `cerr.ErrNotFound`
-- [ ] `ListReports` parses filenames and returns sorted results
-- [ ] `GetReport` on missing file returns `cerr.ErrNotFound`
+- [x] File compiles: `go build ./internal/infra/filestore/...`
+- [x] `Store` satisfies both `app.OrderStore` and `app.ReportStore`
+- [x] `PutOrders` followed by `GetOrders` round-trips correctly
+- [x] `GetOrders` on missing file returns `cerr.ErrNotFound`
+- [x] `ListReports` parses filenames and returns sorted results
+- [x] `GetReport` on missing file returns `cerr.ErrNotFound`
 
 **Tests to add/update:**
 - `TestOrdersRoundTrip` in `backend/internal/infra/filestore/store_test.go` — write orders, read back, verify content
@@ -314,10 +314,10 @@ Handlers to implement:
 9. `PostShutdown(key string, shutdownCh chan struct{}) func(c *echo.Context) error` — if key is empty, return 501. Otherwise extract `key` from URL param, use `subtle.ConstantTimeCompare`, send to channel on match. Return 200 `{"ok": true}` or 401.
 
 **Acceptance criteria:**
-- [ ] File compiles: `go build ./internal/delivery/http/...`
-- [ ] All handler factories return `func(c *echo.Context) error`
-- [ ] No game logic in handlers — just parse, delegate, format
-- [ ] No imports of `runtime` or `infra` concrete types
+- [x] File compiles: `go build ./internal/delivery/http/...`
+- [x] All handler factories return `func(c *echo.Context) error`
+- [x] No game logic in handlers — just parse, delegate, format
+- [x] No imports of `runtime` or `infra` concrete types
 
 **Tests to add/update:**
 - `TestGetHealth` in `backend/internal/delivery/http/handlers_test.go` — verify 200 and JSON shape
@@ -363,10 +363,10 @@ POST /api/shutdown/:key                       → PostShutdown(...)     (public,
 Protected routes use a group with `jwtMiddleware` applied. The shutdown route is only registered if `shutdownKey != ""`.
 
 **Acceptance criteria:**
-- [ ] File compiles: `go build ./internal/delivery/http/...`
-- [ ] Public routes have no middleware
-- [ ] Protected routes use JWT middleware group
-- [ ] Shutdown route only registered when key is non-empty
+- [x] File compiles: `go build ./internal/delivery/http/...`
+- [x] Public routes have no middleware
+- [x] Protected routes use JWT middleware group
+- [x] Shutdown route only registered when key is non-empty
 
 **Tests to add/update:**
 - No unit tests — route wiring is validated by integration/manual testing in Task 9
@@ -407,10 +407,10 @@ Create the server package following the pattern in `gemgem/internal/server/serve
 The shutdown channel is buffered (size 1). The shutdown trigger uses `sync.Once` to prevent double-close. The pattern mirrors `gemgem/internal/server/server.go` lines 137–253.
 
 **Acceptance criteria:**
-- [ ] Files compile: `go build ./internal/runtime/server/...`
-- [ ] `New` returns error if required stores are nil
-- [ ] Signal, timer, and channel shutdown paths are all wired
-- [ ] No imports of `domain`
+- [x] Files compile: `go build ./internal/runtime/server/...`
+- [x] `New` returns error if required config is missing
+- [x] Signal, timer, and channel shutdown paths are all wired
+- [x] No imports of `domain`
 
 **Tests to add/update:**
 - `TestNewMissingDeps` in `backend/internal/runtime/server/server_test.go` — verify `New` returns error when required options are missing
@@ -450,16 +450,50 @@ Run `go get github.com/labstack/echo/v5`, `go get github.com/golang-jwt/jwt/v5`,
 Also wire `cmdServe()` into the root command: `cmdRoot.AddCommand(cmdServe())`.
 
 **Acceptance criteria:**
-- [ ] `go build ./cmd/api/` succeeds
-- [ ] `./api serve --help` shows all flags
-- [ ] `./api serve` without `--data-path` or `--jwt-secret` returns a clear error
-- [ ] With valid flags, server starts and responds to `GET /api/health`
-- [ ] SIGINT triggers graceful shutdown
-- [ ] `--timeout 5s` auto-shuts down after 5 seconds
-- [ ] `--shutdown-key` enables shutdown route; `POST /api/shutdown/{key}` with correct key returns 200
+- [x] `go build ./cmd/api/` succeeds
+- [x] `./api serve --help` shows all flags
+- [x] `./api serve` without `--data-path` or `--jwt-secret` returns a clear error
+- [x] With valid flags, server starts and responds to `GET /api/health`
+- [x] SIGINT triggers graceful shutdown
+- [x] `--timeout 5s` auto-shuts down after 5 seconds
+- [x] `--shutdown-key` enables shutdown route; `POST /api/shutdown/{key}` with correct key returns 200
 
 **Tests to add/update:**
 - No unit tests — this is integration wiring. Validated manually per acceptance criteria.
+
+---
+
+## Post-Sprint Review Findings
+
+After all tasks were completed, a SOUSA compliance and code-smell review was performed. The following issues were identified and fixed in-place before closing the sprint.
+
+### SOUSA Violations (fixed)
+
+| # | Finding | Fix |
+|---|---------|-----|
+| R1 | `delivery/http` imported `infra/auth` — peer layers must not cross-import | Created `EmpireExtractor` func type in `delivery/http`; `runtime/server` injects `auth.FromContext` as a closure |
+| R2 | `cmd/api/main.go` constructed infra adapters (`NewMagicLinkStore`, `NewJWTManager`, `NewStore`) — wiring belongs in `runtime` | Moved all infra construction into `runtime/server.Start()`; `cmd/api` now passes raw config via `WithDataPath`/`WithJWTSecret` |
+| R4 | No app-layer use cases — handlers orchestrated auth flow directly | Added `app.LoginService` encapsulating the magic-link→JWT flow |
+
+### Code Smells (fixed)
+
+| # | Finding | Fix |
+|---|---------|-----|
+| R3 | `backend/.env` tracked in git with secrets | Renamed to `.env.development.local`; added `.env*.local` to `.gitignore` |
+| R5 | `PostOrders` used unbounded `io.ReadAll` — OOM risk | Added `io.LimitReader` with 1 MiB cap; returns 413 if exceeded |
+| R6 | `ListReports` glob matched any `X.Y.json` file | Added year 0–9999, quarter 0–4 validation; year 0 requires quarter 0; added TODO for reports engine manifest |
+| R7 | Every protected handler repeated the same 10-line empire auth block | Extracted `EmpireAuthMiddleware` applied once to the protected route group |
+| R8 | `server_test.go` bound to hardcoded port 18081 — flaky in CI | Changed to port `0` (OS-assigned) |
+
+### Dotenv/Flag Wiring (fixed)
+
+| # | Finding | Fix |
+|---|---------|-----|
+| R9 | Flag defaults registered as `""` — `--help` showed wrong defaults | Set real defaults (`"localhost"`, `"8080"`) in flag registration |
+| R10 | Could not distinguish "flag not passed" from "flag passed empty" | Switched to `cmd.Flags().Changed()` via `resolveString`/`resolveDuration` helpers |
+| R11 | Priority chain (flag → env → default) was ad-hoc `if` blocks | Extracted `resolveString` and `resolveDuration` helpers encoding the chain once |
+| R12 | `timeout` had no env var fallback unlike every other flag | Added `EC_TIMEOUT` env var support |
+| R13 | Dotenv loads relative to CWD — undocumented | Added `cmd/api/README.md` and `cmd/cli/README.md` documenting CWD requirement and config priority |
 
 ---
 
@@ -467,12 +501,12 @@ Also wire `cmdServe()` into the root command: `cmdRoot.AddCommand(cmdServe())`.
 
 | Task | Title                                    | Status      | Agent/Thread | Notes |
 |------|------------------------------------------|-------------|--------------|-------|
-| 1    | Add sentinel errors to cerr              | TODO        |              |       |
-| 2    | Define app-layer port interfaces         | TODO        |              |       |
-| 3    | JWT manager in infra/auth                | TODO        |              |       |
-| 4    | Magic link store in infra/auth           | TODO        |              |       |
-| 5    | File-based order/report store            | TODO        |              |       |
-| 6    | HTTP handlers in delivery/http           | TODO        |              |       |
-| 7    | Route wiring in delivery/http            | TODO        |              |       |
-| 8    | Server struct + graceful shutdown        | TODO        |              |       |
-| 9    | Cobra serve command + go.mod             | TODO        |              |       |
+| 1    | Add sentinel errors to cerr              | DONE        |              |       |
+| 2    | Define app-layer port interfaces         | DONE        |              |       |
+| 3    | JWT manager in infra/auth                | DONE        |              |       |
+| 4    | Magic link store in infra/auth           | DONE        |              |       |
+| 5    | File-based order/report store            | DONE        |              |       |
+| 6    | HTTP handlers in delivery/http           | DONE        |              |       |
+| 7    | Route wiring in delivery/http            | DONE        |              |       |
+| 8    | Server struct + graceful shutdown        | DONE        |              |       |
+| 9    | Cobra serve command + go.mod             | DONE        |              |       |

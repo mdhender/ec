@@ -8,7 +8,12 @@ EC (Epimethean Challenge) is a multiplayer strategy game server. It is a monorep
 
 ## Build Commands
 
-The Go module (`backend/go.mod`), frontend tooling (`apps/web/package.json`), and Makefile have not been created yet — this is a green-field scaffold. Update this file once they exist.
+```bash
+cd backend && go build ./...
+cd backend && go test ./...
+cd backend && go build ./cmd/api/
+cd backend && go build ./cmd/cli/
+```
 
 ## Architecture: SOUSA
 
@@ -33,9 +38,11 @@ Go `main` packages live in `backend/cmd/api/` and `backend/cmd/cli/`. The `apps/
 - `domain` must not import `app`, `infra`, `delivery`, or `runtime`.
 - `app` must not import Echo, SQLite packages, CLI frameworks, or filesystem adapters.
 - `infra` implements ports defined by `app`; `app` never depends on infra concrete types.
+- `delivery` must not import `infra`. They are peers — both depend inward on `app`, never on each other.
 - Both `delivery/http` and `delivery/cli` are peers and must both remain thin — no game logic, no embedded SQL.
 - The CLI is not privileged; it calls the same `app` layer as the HTTP API.
 - `runtime` is the only layer that instantiates and injects concrete implementations.
+- `cmd/` packages must not import `infra` directly; they pass raw config to `runtime`, which owns wiring.
 
 ## Operational Model
 

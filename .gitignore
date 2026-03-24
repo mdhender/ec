@@ -5,3 +5,9 @@
 .codex/
 .idea/
 .vscode/
+
+# dotenv local overrides (may contain secrets)
+.env*.local
+
+# build artifacts
+tmp/

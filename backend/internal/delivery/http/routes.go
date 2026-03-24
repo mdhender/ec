@@ -12,26 +12,27 @@ import (
 func AddRoutes(
 	e *echo.Echo,
 	jwtMiddleware echo.MiddlewareFunc,
-	authStore app.AuthStore,
-	tokenSigner app.TokenSigner,
+	empireExtractor EmpireExtractor,
+	loginSvc *app.LoginService,
 	orderStore app.OrderStore,
 	reportStore app.ReportStore,
 	shutdownKey string,
 	shutdownCh chan struct{},
+	maxOrderBytes int64,
 ) {
 	// Public routes
 	e.GET("/api/health", GetHealth())
-	e.POST("/api/login/:magicLink", PostLogin(authStore, tokenSigner))
+	e.POST("/api/login/:magicLink", PostLogin(loginSvc))
 	e.POST("/api/logout", PostLogout())
 
-	// Protected routes (require valid JWT).
-	// If no middleware is provided (e.g. in tests), use a pass-through.
+	// Protected routes (require valid JWT + empire ownership).
 	if jwtMiddleware == nil {
 		jwtMiddleware = func(next echo.HandlerFunc) echo.HandlerFunc { return next }
 	}
-	protected := e.Group("", jwtMiddleware)
+	empireAuth := EmpireAuthMiddleware(empireExtractor)
+	protected := e.Group("", jwtMiddleware, empireAuth)
 	protected.GET("/api/:empireNo/orders", GetOrders(orderStore))
-	protected.POST("/api/:empireNo/orders", PostOrders(orderStore))
+	protected.POST("/api/:empireNo/orders", PostOrders(orderStore, maxOrderBytes))
 	protected.GET("/api/:empireNo/reports", GetReports(reportStore))
 	protected.GET("/api/:empireNo/reports/:turnYear/:turnQuarter", GetReport(reportStore))
 

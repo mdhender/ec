@@ -14,7 +14,6 @@ import (
 
 	"github.com/mdhender/ec/internal/app"
 	"github.com/mdhender/ec/internal/cerr"
-	"github.com/mdhender/ec/internal/infra/auth"
 )
 
 // Todo returns a 501 Not Implemented handler.
@@ -34,22 +33,17 @@ func GetHealth() func(c *echo.Context) error {
 	}
 }
 
-// PostLogin validates a magic link and issues a JWT token.
-func PostLogin(authStore app.AuthStore, tokenSigner app.TokenSigner) func(c *echo.Context) error {
+// PostLogin validates a magic link and issues a JWT token via the LoginService.
+func PostLogin(loginSvc *app.LoginService) func(c *echo.Context) error {
 	return func(c *echo.Context) error {
 		magicLink := c.Param("magicLink")
 		ctx := c.Request().Context()
 
-		empireNo, ok, err := authStore.ValidateMagicLink(ctx, magicLink)
+		token, err := loginSvc.Login(ctx, magicLink)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "internal error"})
-		}
-		if !ok {
-			return c.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
-		}
-
-		token, err := tokenSigner.Issue(empireNo)
-		if err != nil {
+			if errors.Is(err, cerr.ErrInvalidMagicLink) {
+				return c.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
+			}
 			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "internal error"})
 		}
 
@@ -67,22 +61,11 @@ func PostLogout() func(c *echo.Context) error {
 	}
 }
 
-// GetOrders returns the orders for an empire (JWT-protected, empire must match token).
+// GetOrders returns the orders for the authenticated empire.
+// Requires EmpireAuthMiddleware to have validated ownership.
 func GetOrders(orderStore app.OrderStore) func(c *echo.Context) error {
 	return func(c *echo.Context) error {
-		empireNo, err := strconv.Atoi(c.Param("empireNo"))
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]any{"error": "invalid empire number"})
-		}
-
-		jwtEmpireNo, ok := auth.FromContext(c)
-		if !ok {
-			return c.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
-		}
-
-		if empireNo != jwtEmpireNo {
-			return c.JSON(http.StatusForbidden, map[string]any{"error": "forbidden"})
-		}
+		empireNo, _ := EmpireFromCtx(c)
 
 		ctx := c.Request().Context()
 		body, err := orderStore.GetOrders(ctx, empireNo)
@@ -97,26 +80,18 @@ func GetOrders(orderStore app.OrderStore) func(c *echo.Context) error {
 	}
 }
 
-// PostOrders stores the orders for an empire (JWT-protected, empire must match token).
-func PostOrders(orderStore app.OrderStore) func(c *echo.Context) error {
+// PostOrders stores the orders for the authenticated empire.
+// Requires EmpireAuthMiddleware to have validated ownership.
+func PostOrders(orderStore app.OrderStore, maxBodyBytes int64) func(c *echo.Context) error {
 	return func(c *echo.Context) error {
-		empireNo, err := strconv.Atoi(c.Param("empireNo"))
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]any{"error": "invalid empire number"})
-		}
+		empireNo, _ := EmpireFromCtx(c)
 
-		jwtEmpireNo, ok := auth.FromContext(c)
-		if !ok {
-			return c.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
-		}
-
-		if empireNo != jwtEmpireNo {
-			return c.JSON(http.StatusForbidden, map[string]any{"error": "forbidden"})
-		}
-
-		rawBody, err := io.ReadAll(c.Request().Body)
+		rawBody, err := io.ReadAll(io.LimitReader(c.Request().Body, maxBodyBytes+1))
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "internal error"})
+		}
+		if int64(len(rawBody)) > maxBodyBytes {
+			return c.JSON(http.StatusRequestEntityTooLarge, map[string]any{"error": "request body too large"})
 		}
 
 		ctx := c.Request().Context()
@@ -128,22 +103,11 @@ func PostOrders(orderStore app.OrderStore) func(c *echo.Context) error {
 	}
 }
 
-// GetReports returns the list of reports for an empire (JWT-protected, empire must match token).
+// GetReports returns the list of reports for the authenticated empire.
+// Requires EmpireAuthMiddleware to have validated ownership.
 func GetReports(reportStore app.ReportStore) func(c *echo.Context) error {
 	return func(c *echo.Context) error {
-		empireNo, err := strconv.Atoi(c.Param("empireNo"))
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]any{"error": "invalid empire number"})
-		}
-
-		jwtEmpireNo, ok := auth.FromContext(c)
-		if !ok {
-			return c.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
-		}
-
-		if empireNo != jwtEmpireNo {
-			return c.JSON(http.StatusForbidden, map[string]any{"error": "forbidden"})
-		}
+		empireNo, _ := EmpireFromCtx(c)
 
 		ctx := c.Request().Context()
 		reports, err := reportStore.ListReports(ctx, empireNo)
@@ -155,31 +119,15 @@ func GetReports(reportStore app.ReportStore) func(c *echo.Context) error {
 	}
 }
 
-// GetReport returns a specific turn report for an empire (JWT-protected, empire must match token).
+// GetReport returns a specific turn report for the authenticated empire.
+// Requires EmpireAuthMiddleware to have validated ownership.
 func GetReport(reportStore app.ReportStore) func(c *echo.Context) error {
 	return func(c *echo.Context) error {
-		empireNo, err := strconv.Atoi(c.Param("empireNo"))
+		empireNo, _ := EmpireFromCtx(c)
+
+		turnYear, turnQuarter, err := parseTurnParams(c)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]any{"error": "invalid empire number"})
-		}
-
-		jwtEmpireNo, ok := auth.FromContext(c)
-		if !ok {
-			return c.JSON(http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
-		}
-
-		if empireNo != jwtEmpireNo {
-			return c.JSON(http.StatusForbidden, map[string]any{"error": "forbidden"})
-		}
-
-		turnYear, err := strconv.Atoi(c.Param("turnYear"))
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]any{"error": "invalid turn year"})
-		}
-
-		turnQuarter, err := strconv.Atoi(c.Param("turnQuarter"))
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, map[string]any{"error": "invalid turn quarter"})
+			return err
 		}
 
 		ctx := c.Request().Context()
@@ -193,6 +141,32 @@ func GetReport(reportStore app.ReportStore) func(c *echo.Context) error {
 
 		return c.JSONBlob(http.StatusOK, data)
 	}
+}
+
+// parseTurnParams extracts and validates turnYear and turnQuarter path params.
+func parseTurnParams(c *echo.Context) (int, int, error) {
+	turnYear, err := parseIntParam(c, "turnYear")
+	if err != nil {
+		return 0, 0, c.JSON(http.StatusBadRequest, map[string]any{"error": "invalid turn year"})
+	}
+	turnQuarter, err := parseIntParam(c, "turnQuarter")
+	if err != nil {
+		return 0, 0, c.JSON(http.StatusBadRequest, map[string]any{"error": "invalid turn quarter"})
+	}
+	return turnYear, turnQuarter, nil
+}
+
+// parseIntParam extracts a named path parameter as an int.
+func parseIntParam(c *echo.Context, name string) (int, error) {
+	v := c.Param(name)
+	if v == "" {
+		return 0, errors.New("missing parameter")
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, err
+	}
+	return n, nil
 }
 
 // PostShutdown triggers a graceful shutdown using a shared secret key.

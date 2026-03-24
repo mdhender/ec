@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -18,7 +19,11 @@ import (
 
 	"github.com/mdhender/ec/internal/app"
 	deliveryhttp "github.com/mdhender/ec/internal/delivery/http"
+	"github.com/mdhender/ec/internal/infra/auth"
+	"github.com/mdhender/ec/internal/infra/filestore"
 )
+
+const maxOrderBytes int64 = 1 << 20 // 1 MiB
 
 // Server manages the EC API HTTP server lifecycle.
 type Server struct {
@@ -26,21 +31,20 @@ type Server struct {
 	port          string
 	shutdownAfter time.Duration
 	shutdownKey   string
-	jwtMiddleware echo.MiddlewareFunc
-	authStore     app.AuthStore
-	tokenSigner   app.TokenSigner
-	orderStore    app.OrderStore
-	reportStore   app.ReportStore
+	dataPath      string
+	jwtSecret     string
+	jwtTTL        time.Duration
 	shutdownCh    chan struct{}
 	once          sync.Once
 }
 
 // New creates a Server by applying the given options.
-// Returns an error if required stores are missing.
+// Returns an error if required configuration is missing.
 func New(opts ...Option) (*Server, error) {
 	s := &Server{
 		host:       "localhost",
 		port:       "8080",
+		jwtTTL:     24 * time.Hour,
 		shutdownCh: make(chan struct{}, 1),
 	}
 	for _, opt := range opts {
@@ -48,36 +52,51 @@ func New(opts ...Option) (*Server, error) {
 			return nil, err
 		}
 	}
-	if s.authStore == nil {
-		return nil, fmt.Errorf("server: authStore is required")
+	if s.dataPath == "" {
+		return nil, fmt.Errorf("server: dataPath is required")
 	}
-	if s.tokenSigner == nil {
-		return nil, fmt.Errorf("server: tokenSigner is required")
-	}
-	if s.orderStore == nil {
-		return nil, fmt.Errorf("server: orderStore is required")
-	}
-	if s.reportStore == nil {
-		return nil, fmt.Errorf("server: reportStore is required")
+	if s.jwtSecret == "" {
+		return nil, fmt.Errorf("server: jwtSecret is required")
 	}
 	return s, nil
 }
 
-// Start wires routes, starts the HTTP server, and blocks until shutdown.
+// Start builds infra adapters, wires routes, starts the HTTP server, and blocks until shutdown.
 func (s *Server) Start() error {
+	// Build infra adapters (runtime owns concrete instantiation).
+	authStore, err := auth.NewMagicLinkStore(filepath.Join(s.dataPath, "auth.json"))
+	if err != nil {
+		return fmt.Errorf("server: load auth: %w", err)
+	}
+
+	jwtMgr := auth.NewJWTManager(s.jwtSecret, s.jwtTTL)
+	fileStore := filestore.NewStore(s.dataPath)
+
+	// Build app-layer services.
+	loginSvc := &app.LoginService{
+		Auth:  authStore,
+		Token: jwtMgr,
+	}
+
+	// Empire extractor bridges infra/auth into delivery without a direct import.
+	empireExtractor := func(c *echo.Context) (int, bool) {
+		return auth.FromContext(c)
+	}
+
 	e := echo.New()
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
 
 	deliveryhttp.AddRoutes(
 		e,
-		s.jwtMiddleware,
-		s.authStore,
-		s.tokenSigner,
-		s.orderStore,
-		s.reportStore,
+		jwtMgr.Middleware(),
+		empireExtractor,
+		loginSvc,
+		fileStore,
+		fileStore,
 		s.shutdownKey,
 		s.shutdownCh,
+		maxOrderBytes,
 	)
 
 	addr := fmt.Sprintf("%s:%s", s.host, s.port)

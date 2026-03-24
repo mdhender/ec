@@ -82,21 +82,28 @@ func (s *Store) ListReports(_ context.Context, empireNo int) ([]app.ReportMeta, 
 		return nil, err
 	}
 
+	// TODO: When the reports engine is added, it will create a reports.json
+	// manifest. At that point, switch from glob-based discovery to reading
+	// the manifest. For now, validate filenames defensively.
 	var results []app.ReportMeta
 	for _, match := range matches {
 		base := filepath.Base(match)
-		// base is "{turnYear}.{turnQuarter}.json"
+		// expect "{year}.{quarter}.json" where year is 0–9999 and quarter is 0–4.
 		name := strings.TrimSuffix(base, ".json")
 		parts := strings.SplitN(name, ".", 2)
 		if len(parts) != 2 {
 			continue
 		}
 		turnYear, err := strconv.Atoi(parts[0])
-		if err != nil {
+		if err != nil || turnYear < 0 || turnYear > 9999 {
 			continue
 		}
 		turnQuarter, err := strconv.Atoi(parts[1])
-		if err != nil {
+		if err != nil || turnQuarter < 0 || turnQuarter > 4 {
+			continue
+		}
+		// year 0 is the pre-game state; only quarter 0 is valid.
+		if turnYear == 0 && turnQuarter != 0 {
 			continue
 		}
 		results = append(results, app.ReportMeta{TurnYear: turnYear, TurnQuarter: turnQuarter})

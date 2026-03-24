@@ -4,10 +4,6 @@ package server
 
 import (
 	"time"
-
-	"github.com/labstack/echo/v5"
-
-	"github.com/mdhender/ec/internal/app"
 )
 
 // Option is a functional option for configuring a Server.
@@ -33,27 +29,17 @@ func WithShutdownKey(key string) Option {
 	return func(s *Server) error { s.shutdownKey = key; return nil }
 }
 
-// WithJWTMiddleware sets the JWT middleware function.
-func WithJWTMiddleware(mw echo.MiddlewareFunc) Option {
-	return func(s *Server) error { s.jwtMiddleware = mw; return nil }
+// WithDataPath sets the path to the data directory.
+func WithDataPath(path string) Option {
+	return func(s *Server) error { s.dataPath = path; return nil }
 }
 
-// WithAuthStore sets the authentication store.
-func WithAuthStore(store app.AuthStore) Option {
-	return func(s *Server) error { s.authStore = store; return nil }
+// WithJWTSecret sets the HMAC secret for JWT signing.
+func WithJWTSecret(secret string) Option {
+	return func(s *Server) error { s.jwtSecret = secret; return nil }
 }
 
-// WithTokenSigner sets the JWT token signer.
-func WithTokenSigner(signer app.TokenSigner) Option {
-	return func(s *Server) error { s.tokenSigner = signer; return nil }
-}
-
-// WithOrderStore sets the order store.
-func WithOrderStore(store app.OrderStore) Option {
-	return func(s *Server) error { s.orderStore = store; return nil }
-}
-
-// WithReportStore sets the report store.
-func WithReportStore(store app.ReportStore) Option {
-	return func(s *Server) error { s.reportStore = store; return nil }
+// WithJWTTTL sets the JWT token time-to-live.
+func WithJWTTTL(ttl time.Duration) Option {
+	return func(s *Server) error { s.jwtTTL = ttl; return nil }
 }
