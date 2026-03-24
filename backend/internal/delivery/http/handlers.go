@@ -136,6 +136,11 @@ func PostOrders(orderStore app.OrderStore, maxBodyBytes int64) func(c *echo.Cont
 // GetReports returns the list of reports for the authenticated empire.
 // Requires EmpireAuthMiddleware to have validated ownership.
 func GetReports(reportStore app.ReportStore) func(c *echo.Context) error {
+	type reportItem struct {
+		TurnYear    int    `json:"turn_year"`
+		TurnQuarter int    `json:"turn_quarter"`
+		Link        string `json:"link"`
+	}
 	return func(c *echo.Context) error {
 		empireNo, _ := EmpireFromCtx(c)
 
@@ -145,7 +150,16 @@ func GetReports(reportStore app.ReportStore) func(c *echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "internal error"})
 		}
 
-		return c.JSON(http.StatusOK, reports)
+		items := make([]reportItem, len(reports))
+		for i, r := range reports {
+			items[i] = reportItem{
+				TurnYear:    r.TurnYear,
+				TurnQuarter: r.TurnQuarter,
+				Link:        fmt.Sprintf("/api/%d/reports/%d/%d", empireNo, r.TurnYear, r.TurnQuarter),
+			}
+		}
+
+		return c.JSON(http.StatusOK, items)
 	}
 }
 
