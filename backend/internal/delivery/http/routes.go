@@ -24,7 +24,11 @@ func AddRoutes(
 	e.POST("/api/login/:magicLink", PostLogin(authStore, tokenSigner))
 	e.POST("/api/logout", PostLogout())
 
-	// Protected routes (require valid JWT)
+	// Protected routes (require valid JWT).
+	// If no middleware is provided (e.g. in tests), use a pass-through.
+	if jwtMiddleware == nil {
+		jwtMiddleware = func(next echo.HandlerFunc) echo.HandlerFunc { return next }
+	}
 	protected := e.Group("", jwtMiddleware)
 	protected.GET("/api/:empireNo/orders", GetOrders(orderStore))
 	protected.POST("/api/:empireNo/orders", PostOrders(orderStore))
