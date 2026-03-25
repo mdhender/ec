@@ -3,83 +3,104 @@
 package cli
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 
 	"github.com/mdhender/ec/internal/app"
-	"github.com/spf13/cobra"
+	"github.com/peterbourgon/ff/v4"
 )
 
-// CmdCreateCluster returns a cobra command that generates a cluster and writes it to disk.
-func CmdCreateCluster(svc *app.ClusterService) *cobra.Command {
-	var path string
-	var seed1, seed2 uint64 = 10, 10
-	overwrite := false
+// CmdCreateCluster returns an ff.Command that generates a cluster and writes it to disk.
+func CmdCreateCluster(svc *app.ClusterService) *ff.Command {
+	fs := ff.NewFlagSet("cluster")
+	path := fs.StringLong("path", "testdata/cluster.json", "path to save cluster JSON")
+	seed1Str := fs.StringLong("seed1", "10", "seed1")
+	seed2Str := fs.StringLong("seed2", "10", "seed2")
+	overwrite := fs.BoolLong("overwrite", "overwrite file if it exists")
 
-	cmd := &cobra.Command{
-		Use:   "cluster",
-		Short: "create a new cluster",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cluster, err := svc.CreateCluster(seed1, seed2, path, overwrite)
+	return &ff.Command{
+		Name:      "cluster",
+		Usage:     "cli create cluster [FLAGS]",
+		ShortHelp: "create a new cluster",
+		Flags:     fs,
+		Exec: func(ctx context.Context, args []string) error {
+			seed1, err := strconv.ParseUint(*seed1Str, 10, 64)
+			if err != nil {
+				return fmt.Errorf("--seed1: invalid value %q: %w", *seed1Str, err)
+			}
+			seed2, err := strconv.ParseUint(*seed2Str, 10, 64)
+			if err != nil {
+				return fmt.Errorf("--seed2: invalid value %q: %w", *seed2Str, err)
+			}
+			cluster, err := svc.CreateCluster(seed1, seed2, *path, *overwrite)
 			if err != nil {
 				return err
 			}
 			WriteClusterReport(os.Stdout, cluster)
-			slog.Info("cluster created", "path", path)
+			slog.Info("cluster created", "path", *path)
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&path, "path", "testdata/cluster.json", "path to save cluster JSON")
-	cmd.Flags().Uint64Var(&seed1, "seed1", seed1, "seed1")
-	cmd.Flags().Uint64Var(&seed2, "seed2", seed2, "seed2")
-	cmd.Flags().BoolVar(&overwrite, "overwrite", overwrite, "overwrite file if it exists")
-	return cmd
 }
 
-// CmdTestCluster returns a cobra command that runs N iterations and reports distribution stats.
-func CmdTestCluster(svc *app.ClusterService) *cobra.Command {
-	var iterations int = 100
-	var seed1, seed2 uint64 = 10, 10
+// CmdTestCluster returns an ff.Command that runs N iterations and reports distribution stats.
+func CmdTestCluster(svc *app.ClusterService) *ff.Command {
+	fs := ff.NewFlagSet("cluster")
+	iterations := fs.IntLong("iterations", 100, "number of iterations")
+	seed1Str := fs.StringLong("seed1", "10", "seed1")
+	seed2Str := fs.StringLong("seed2", "10", "seed2")
 
-	cmd := &cobra.Command{
-		Use:   "cluster",
-		Short: "test cluster generation distributions",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			stats, err := svc.TestCluster(seed1, seed2, iterations)
+	return &ff.Command{
+		Name:      "cluster",
+		Usage:     "cli test cluster [FLAGS]",
+		ShortHelp: "test cluster generation distributions",
+		Flags:     fs,
+		Exec: func(ctx context.Context, args []string) error {
+			seed1, err := strconv.ParseUint(*seed1Str, 10, 64)
+			if err != nil {
+				return fmt.Errorf("--seed1: invalid value %q: %w", *seed1Str, err)
+			}
+			seed2, err := strconv.ParseUint(*seed2Str, 10, 64)
+			if err != nil {
+				return fmt.Errorf("--seed2: invalid value %q: %w", *seed2Str, err)
+			}
+			stats, err := svc.TestCluster(seed1, seed2, *iterations)
 			if err != nil {
 				return err
 			}
-			WriteStatsReport(os.Stdout, stats, iterations)
+			WriteStatsReport(os.Stdout, stats, *iterations)
 			return nil
 		},
 	}
-	cmd.Flags().IntVar(&iterations, "iterations", iterations, "number of iterations")
-	cmd.Flags().Uint64Var(&seed1, "seed1", seed1, "seed1")
-	cmd.Flags().Uint64Var(&seed2, "seed2", seed2, "seed2")
-	return cmd
 }
 
-// CmdCreateGameState returns a cobra command that creates a game from a cluster file.
-func CmdCreateGameState(svc *app.ClusterService) *cobra.Command {
-	var clusterPath string
-	var savePath string
-	var overwrite bool
+// CmdCreateGameState returns an ff.Command that creates a game from a cluster file.
+func CmdCreateGameState(svc *app.ClusterService) *ff.Command {
+	fs := ff.NewFlagSet("game-state")
+	clusterPath := fs.StringLong("cluster", "", "path to cluster JSON file")
+	savePath := fs.StringLong("save", "", "path to save game JSON file")
+	overwrite := fs.BoolLong("overwrite", "overwrite existing save file")
 
-	cmd := &cobra.Command{
-		Use:   "game-state",
-		Short: "create a new game state from a cluster file",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := svc.CreateGame(clusterPath, savePath, overwrite); err != nil {
+	return &ff.Command{
+		Name:      "game-state",
+		Usage:     "cli create game-state [FLAGS]",
+		ShortHelp: "create a new game state from a cluster file",
+		Flags:     fs,
+		Exec: func(ctx context.Context, args []string) error {
+			if *clusterPath == "" {
+				return fmt.Errorf("--cluster is required")
+			}
+			if *savePath == "" {
+				return fmt.Errorf("--save is required")
+			}
+			if err := svc.CreateGame(*clusterPath, *savePath, *overwrite); err != nil {
 				return err
 			}
-			slog.Info("game created", "cluster", clusterPath, "save", savePath)
+			slog.Info("game created", "cluster", *clusterPath, "save", *savePath)
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&clusterPath, "cluster", "", "path to cluster JSON file")
-	cmd.Flags().StringVar(&savePath, "save", "", "path to save game JSON file")
-	cmd.Flags().BoolVar(&overwrite, "overwrite", false, "overwrite existing save file")
-	_ = cmd.MarkFlagRequired("cluster")
-	_ = cmd.MarkFlagRequired("save")
-	return cmd
 }
