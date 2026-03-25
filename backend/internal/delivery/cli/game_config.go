@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/mdhender/ec/internal/app"
+	"github.com/mdhender/ec/internal/domain"
 	"github.com/peterbourgon/ff/v4"
 )
 
@@ -33,11 +34,39 @@ func CmdCreateGame(svc *app.GameConfigService) *ff.Command {
 	}
 }
 
+// CmdCreateHomeWorld returns an ff.Command that selects or validates a homeworld planet.
+func CmdCreateHomeWorld(svc *app.GameConfigService) *ff.Command {
+	fs := ff.NewFlagSet("homeworld")
+	dataPath := fs.StringLong("data-path", "", "directory containing game.json and cluster.json")
+	planet := fs.IntLong("planet", 0, "planet ID to use as homeworld (0 = auto-select)")
+	minDistance := fs.IntLong("min-distance", 3, "minimum distance from existing homeworlds")
+
+	return &ff.Command{
+		Name:      "homeworld",
+		Usage:     "cli create homeworld [FLAGS]",
+		ShortHelp: "select or validate a homeworld planet and record a new race",
+		Flags:     fs,
+		Exec: func(ctx context.Context, args []string) error {
+			if *dataPath == "" {
+				return fmt.Errorf("--data-path is required")
+			}
+			planetID, err := svc.CreateHomeWorld(*dataPath, domain.PlanetID(*planet), *minDistance)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("homeworld created: planet %d\n", planetID)
+			return nil
+		},
+	}
+}
+
 // CmdAddEmpire returns an ff.Command that adds an empire to game.json and auth.json.
 func CmdAddEmpire(svc *app.GameConfigService) *ff.Command {
 	fs := ff.NewFlagSet("empire")
 	dataPath := fs.StringLong("data-path", "", "directory containing game.json and auth.json")
 	empireNo := fs.IntLong("empire", 0, "empire number (0 = auto-assign)")
+	name := fs.StringLong("name", "", "empire name")
+	homeworld := fs.IntLong("homeworld", 0, "homeworld planet ID (0 = use active homeworld)")
 
 	return &ff.Command{
 		Name:      "empire",
@@ -48,11 +77,11 @@ func CmdAddEmpire(svc *app.GameConfigService) *ff.Command {
 			if *dataPath == "" {
 				return fmt.Errorf("--data-path is required (or set EC_DATA_PATH)")
 			}
-			n, uuid, err := svc.AddEmpire(*dataPath, *empireNo)
+			n, uuid, err := svc.AddEmpire(*dataPath, *empireNo, *name, domain.PlanetID(*homeworld))
 			if err != nil {
 				return err
 			}
-			fmt.Printf("added empire %d, magic link: %s\n", n, uuid)
+			fmt.Printf("added empire %d (%s), magic link: %s\n", n, *name, uuid)
 			return nil
 		},
 	}

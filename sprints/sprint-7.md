@@ -164,10 +164,10 @@ Do **not** change `ClusterReader` or `ClusterService.CreateGame` in this task;
 those are removed in Task 2.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `CmdCreateCluster` flag is `--data-path`, not `--path`
-- [ ] Running `cli create cluster --data-path /some/dir` writes `/some/dir/cluster.json`
-- [ ] `ClusterWriter.WriteCluster` signature takes a directory path
+- [x] `cd backend && go build ./...` succeeds
+- [x] `CmdCreateCluster` flag is `--data-path`, not `--path`
+- [x] Running `cli create cluster --data-path /some/dir` writes `/some/dir/cluster.json`
+- [x] `ClusterWriter.WriteCluster` signature takes a directory path
 
 **Tests to add/update:**
 - No new tests — validated via build. The cluster service has no dedicated unit tests.
@@ -208,11 +208,11 @@ code it depends on exclusively.
    from the `createCmd.Subcommands` slice.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `CmdCreateGameState` does not exist anywhere in the codebase
-- [ ] `ClusterService` has no `GameWriter` field
-- [ ] `GameWriter` interface does not exist
-- [ ] `cli create game-state` is not a valid command
+- [x] `cd backend && go build ./...` succeeds
+- [x] `CmdCreateGameState` does not exist anywhere in the codebase
+- [x] `ClusterService` has no `GameWriter` field
+- [x] `GameWriter` interface does not exist
+- [x] `cli create game-state` is not a valid command
 
 **Tests to add/update:**
 - None — deleted code had no tests.
@@ -249,10 +249,10 @@ referenced by `app` and `infra` layers. Deletion happens in Task 5 after
 storage is migrated.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes
-- [ ] `domain.Empire` has an `Active bool` field
-- [ ] `domain.GameConfig` and `domain.EmpireEntry` still exist (not yet deleted)
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes
+- [x] `domain.Empire` has an `Active bool` field
+- [x] `domain.GameConfig` and `domain.EmpireEntry` still exist (not yet deleted)
 
 **Tests to add/update:**
 - None — pure additive model change with no new logic.
@@ -327,12 +327,12 @@ the build.
    ```
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `domain.Race`, `domain.RaceID` exist
-- [ ] `domain.Game` has `Races []Race` and `ActiveHomeWorldID PlanetID`; no `Cluster` field
-- [ ] `domain.Empire` has `Race RaceID`
-- [ ] `domain.Coords` has a `Distance(Coords) float64` method
-- [ ] Field spelling is consistently `HomeWorld` (capital W) everywhere
+- [x] `cd backend && go build ./...` succeeds
+- [x] `domain.Race`, `domain.RaceID` exist
+- [x] `domain.Game` has `Races []Race` and `ActiveHomeWorldID PlanetID`; no `Cluster` field
+- [x] `domain.Empire` has `Race RaceID`
+- [x] `domain.Coords` has a `Distance(Coords) float64` method
+- [x] Field spelling is consistently `HomeWorld` (capital W) everywhere
 
 **Tests to add/update:**
 - `TestCoordsDistance` in `backend/internal/domain/cluster_test.go` (new file
@@ -396,11 +396,11 @@ the game config storage layer, then delete `GameConfig` and `EmpireEntry`.
    Keep `AuthConfig` and `AuthLink` — they are still used by the auth layer.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes (all existing test cases still present and passing)
-- [ ] No references to `domain.GameConfig` or `domain.EmpireEntry` remain anywhere
-- [ ] `GameConfigStore` interface has `GameExists`, `ReadGame`, `WriteGame`
-- [ ] `game.json` on disk now marshals as `domain.Game`
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes (all existing test cases still present and passing)
+- [x] No references to `domain.GameConfig` or `domain.EmpireEntry` remain anywhere
+- [x] `GameConfigStore` interface has `GameExists`, `ReadGame`, `WriteGame`
+- [x] `game.json` on disk now marshals as `domain.Game`
 
 **Tests to add/update:**
 - `TestCreateGame`, `TestAddEmpire`, `TestRemoveEmpire` in
@@ -446,10 +446,10 @@ After this task, `filestore.Store` satisfies both `ClusterWriter` and the new
 `ClusterStore` interface.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `ClusterStore` interface exists in `app/cluster_ports.go`
-- [ ] `filestore.ReadCluster` takes a directory path and reads `<dataPath>/cluster.json`
-- [ ] `filestore.Store` satisfies `ClusterStore`
+- [x] `cd backend && go build ./...` succeeds
+- [x] `ClusterStore` interface exists in `app/cluster_ports.go`
+- [x] `filestore.ReadCluster` takes a directory path and reads `<dataPath>/cluster.json`
+- [x] `filestore.Store` satisfies `ClusterStore`
 
 **Tests to add/update:**
 - None — `ReadCluster` had no tests and the change is mechanical.
@@ -520,19 +520,19 @@ Behavior:
 - Return `(planetID, nil)`.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes
-- [ ] `GameConfigService` has a `Cluster ClusterStore` field
-- [ ] `CreateHomeWorld` auto-selects a terrestrial planet when `planetID == 0`
-- [ ] `CreateHomeWorld` uses `--planet N` when `planetID != 0`; skips min-distance
-- [ ] Habitability is set to 25 on the chosen planet
-- [ ] A race is created with `ID == PlanetID`
-- [ ] `game.ActiveHomeWorldID` is set after creation
-- [ ] Fails with clear error if planet not found
-- [ ] Fails with clear error if planet is not terrestrial
-- [ ] Fails with clear error if planet is already a homeworld
-- [ ] Fails with clear error if no terrestrial planets available
-- [ ] Distance filtering rejects candidates where `distance < float64(minDistance)`
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes
+- [x] `GameConfigService` has a `Cluster ClusterStore` field
+- [x] `CreateHomeWorld` auto-selects a terrestrial planet when `planetID == 0`
+- [x] `CreateHomeWorld` uses `--planet N` when `planetID != 0`; skips min-distance
+- [x] Habitability is set to 25 on the chosen planet
+- [x] A race is created with `ID == PlanetID`
+- [x] `game.ActiveHomeWorldID` is set after creation
+- [x] Fails with clear error if planet not found
+- [x] Fails with clear error if planet is not terrestrial
+- [x] Fails with clear error if planet is already a homeworld
+- [x] Fails with clear error if no terrestrial planets available
+- [x] Distance filtering rejects candidates where `distance < float64(minDistance)`
 
 **Tests to add/update:**
 - `TestCreateHomeWorld_AutoSelect` in `backend/internal/app/game_config_service_test.go`
@@ -584,11 +584,11 @@ planet ID.
 - Add `deliverycli.CmdCreateHomeWorld(gameConfigSvc)` to `createCmd.Subcommands`.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cli create homeworld --data-path /dir` picks a terrestrial planet and prints its ID
-- [ ] `cli create homeworld --data-path /dir --planet N` uses planet N
-- [ ] `cli create homeworld --data-path /dir --min-distance 5` enforces 5-unit separation
-- [ ] Missing `--data-path` produces a clear error
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cli create homeworld --data-path /dir` picks a terrestrial planet and prints its ID
+- [x] `cli create homeworld --data-path /dir --planet N` uses planet N
+- [x] `cli create homeworld --data-path /dir --min-distance 5` enforces 5-unit separation
+- [x] Missing `--data-path` produces a clear error
 
 **Tests to add/update:**
 - None — CLI commands are validated via build and integration testing in Task 12.
@@ -676,17 +676,17 @@ continue to work:
 - Create empire data directory
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes
-- [ ] `AddEmpire` fails if no active homeworld and no `homeWorldID` given
-- [ ] `AddEmpire` with explicit `homeWorldID` fails if homeworld does not exist
-- [ ] A 26th empire on the same homeworld is rejected
-- [ ] Empire is added to `race.Empires` in `game.json`
-- [ ] Empire `Race` and `HomeWorld` fields are set
-- [ ] A starting colony is created in `cluster.Colonies` and in `empire.Colonies`
-- [ ] Empire name is scrubbed: HTML/shell-special chars removed, spaces compressed, trimmed
-- [ ] Scrubbing a name to empty string returns an error
-- [ ] Existing behaviors preserved: auto-assign, duplicate rejection, magic link, empire dir
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes
+- [x] `AddEmpire` fails if no active homeworld and no `homeWorldID` given
+- [x] `AddEmpire` with explicit `homeWorldID` fails if homeworld does not exist
+- [x] A 26th empire on the same homeworld is rejected
+- [x] Empire is added to `race.Empires` in `game.json`
+- [x] Empire `Race` and `HomeWorld` fields are set
+- [x] A starting colony is created in `cluster.Colonies` and in `empire.Colonies`
+- [x] Empire name is scrubbed: HTML/shell-special chars removed, spaces compressed, trimmed
+- [x] Scrubbing a name to empty string returns an error
+- [x] Existing behaviors preserved: auto-assign, duplicate rejection, magic link, empire dir
 
 **Tests to add/update:**
 - `TestAddEmpire_RequiresHomeWorld` — call `AddEmpire` with no active homeworld;
@@ -727,10 +727,10 @@ the updated `AddEmpire` service method.
    ```
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `CmdAddEmpire` has `--name` and `--homeworld` flags
-- [ ] `cli create empire --data-path /dir --name "Test"` passes the name to the service
-- [ ] `cli create empire --data-path /dir --homeworld 42` passes the homeworld ID
+- [x] `cd backend && go build ./...` succeeds
+- [x] `CmdAddEmpire` has `--name` and `--homeworld` flags
+- [x] `cli create empire --data-path /dir --name "Test"` passes the name to the service
+- [x] `cli create empire --data-path /dir --homeworld 42` passes the homeworld ID
 
 **Tests to add/update:**
 - None — CLI commands are validated via build and integration testing in Task 12.
@@ -788,13 +788,13 @@ smells, and consistency issues. The canonical SOUSA reference is
    Fix any warnings.
 
 **Acceptance criteria:**
-- [ ] No SOUSA import violations exist
-- [ ] No game logic in `delivery/cli` — all logic is in `app` or `domain`
-- [ ] No unused code (imports, types, functions, test helpers)
-- [ ] `HomeWorld` spelling is consistent everywhere
-- [ ] No stale `GameConfig`/`EmpireEntry` references
-- [ ] `cd backend && go vet ./...` passes
-- [ ] All error messages include sufficient diagnostic context
+- [x] No SOUSA import violations exist
+- [x] No game logic in `delivery/cli` — all logic is in `app` or `domain`
+- [x] No unused code (imports, types, functions, test helpers)
+- [x] `HomeWorld` spelling is consistent everywhere
+- [x] No stale `GameConfig`/`EmpireEntry` references
+- [x] `cd backend && go vet ./...` passes
+- [x] All error messages include sufficient diagnostic context
 
 **Tests to add/update:**
 - None — this is an audit task. Fix any issues found in the files where they
@@ -833,10 +833,10 @@ smells, and consistency issues. The canonical SOUSA reference is
    Each command must succeed and the expected files must exist.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds with zero errors
-- [ ] `cd backend && go test ./...` passes all tests
-- [ ] `cd backend && go vet ./...` passes
-- [ ] No source files reference `domain.GameConfig`, `domain.EmpireEntry`, `CmdCreateGameState`, `GameWriter`, or `ClusterReader`
+- [x] `cd backend && go build ./...` succeeds with zero errors
+- [x] `cd backend && go test ./...` passes all tests
+- [x] `cd backend && go vet ./...` passes
+- [x] No source files reference `domain.GameConfig`, `domain.EmpireEntry`, `CmdCreateGameState`, `GameWriter`, or `ClusterReader`
 - [ ] End-to-end smoke test runs without errors
 
 **Tests to add/update:**
@@ -848,15 +848,15 @@ smells, and consistency issues. The canonical SOUSA reference is
 
 | Task | Title                                                  | Status | Depends On | Agent/Thread | Notes |
 |------|--------------------------------------------------------|--------|------------|--------------|-------|
-| 1    | Restructure cluster file location                      | TODO   | —          |              |       |
-| 2    | Delete `create game-state` and related code            | TODO   | 1          |              |       |
-| 3    | Domain: add Empire.Active                              | TODO   | —          |              |       |
-| 4    | Domain: add Race/HomeWorld types, Coords.Distance      | TODO   | 2, 3       |              |       |
-| 5    | Migrate game config storage; delete GameConfig         | TODO   | 4          |              |       |
-| 6    | Add ClusterStore interface + update ReadCluster        | TODO   | 1          |              |       |
-| 7    | Implement CreateHomeWorld service logic                 | TODO   | 5, 6       |              |       |
-| 8    | Add `create homeworld` CLI command + wiring            | TODO   | 7          |              |       |
-| 9    | Update AddEmpire service with race + colony            | TODO   | 7          |              |       |
-| 10   | Update `create empire` CLI with new flags              | TODO   | 9          |              |       |
-| 11   | Audit for code smells and SOUSA compliance             | TODO   | 1–10       |              |       |
-| 12   | Verify build, clean up, full test suite                | TODO   | 11         |              |       |
+| 1    | Restructure cluster file location                      | DONE   | —          |              |       |
+| 2    | Delete `create game-state` and related code            | DONE   | 1          |              |       |
+| 3    | Domain: add Empire.Active                              | DONE   | —          |              |       |
+| 4    | Domain: add Race/HomeWorld types, Coords.Distance      | DONE   | 2, 3       |              |       |
+| 5    | Migrate game config storage; delete GameConfig         | DONE   | 4          |              |       |
+| 6    | Add ClusterStore interface + update ReadCluster        | DONE   | 1          |              |       |
+| 7    | Implement CreateHomeWorld service logic                 | DONE   | 5, 6       |              |       |
+| 8    | Add `create homeworld` CLI command + wiring            | DONE   | 7          |              |       |
+| 9    | Update AddEmpire service with race + colony            | DONE   | 7          |              |       |
+| 10   | Update `create empire` CLI with new flags              | DONE   | 9          |              |       |
+| 11   | Audit for code smells and SOUSA compliance             | DONE   | 1–10       |              |       |
+| 12   | Verify build, clean up, full test suite                | DONE   | 11         |              |       |

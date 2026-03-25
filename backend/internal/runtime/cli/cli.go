@@ -15,13 +15,12 @@ func BuildCommands() []*ff.Command {
 	store := filestore.NewStore("")
 
 	clusterSvc := &app.ClusterService{
-		Reader:     store,
-		Writer:     store,
-		GameWriter: store,
+		Writer: store,
 	}
 
 	gameConfigSvc := &app.GameConfigService{
-		Store: store,
+		Store:   store,
+		Cluster: store,
 	}
 
 	createCmd := &ff.Command{
@@ -30,8 +29,8 @@ func BuildCommands() []*ff.Command {
 		ShortHelp: "create game objects",
 		Subcommands: []*ff.Command{
 			deliverycli.CmdCreateCluster(clusterSvc),
-			deliverycli.CmdCreateGameState(clusterSvc),
 			deliverycli.CmdCreateGame(gameConfigSvc),
+			deliverycli.CmdCreateHomeWorld(gameConfigSvc),
 			deliverycli.CmdAddEmpire(gameConfigSvc),
 		},
 	}

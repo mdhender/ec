@@ -2,6 +2,8 @@
 
 package domain
 
+import "math"
+
 // Cluster contains all the objects in the cluster.
 type Cluster struct {
 	Systems  []System
@@ -25,6 +27,14 @@ type Coords struct {
 	X int
 	Y int
 	Z int
+}
+
+// Distance returns the Euclidean distance between two coordinates.
+func (c Coords) Distance(other Coords) float64 {
+	dx := float64(c.X - other.X)
+	dy := float64(c.Y - other.Y)
+	dz := float64(c.Z - other.Z)
+	return math.Sqrt(dx*dx + dy*dy + dz*dz)
 }
 
 func (c Coords) Less(c2 Coords) bool {

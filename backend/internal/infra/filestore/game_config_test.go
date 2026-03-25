@@ -9,33 +9,42 @@ import (
 	"github.com/mdhender/ec/internal/infra/filestore"
 )
 
-func TestGameConfigRoundTrip(t *testing.T) {
+func TestGameRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	store := filestore.NewStore("")
 
-	original := domain.GameConfig{
-		Empires: []domain.EmpireEntry{
-			{Empire: 42, Active: true},
-			{Empire: 1812, Active: false},
+	original := domain.Game{
+		Empires: []domain.Empire{
+			{ID: 42, Active: true},
+			{ID: 1812, Active: false},
 		},
 	}
 
-	if err := store.WriteGameConfig(dir, original); err != nil {
-		t.Fatalf("WriteGameConfig: %v", err)
+	if err := store.WriteGame(dir, original); err != nil {
+		t.Fatalf("WriteGame: %v", err)
 	}
 
-	got, err := store.ReadGameConfig(dir)
+	got, err := store.ReadGame(dir)
 	if err != nil {
-		t.Fatalf("ReadGameConfig: %v", err)
+		t.Fatalf("ReadGame: %v", err)
 	}
 
 	if len(got.Empires) != len(original.Empires) {
 		t.Fatalf("expected %d empires, got %d", len(original.Empires), len(got.Empires))
 	}
 	for i, e := range original.Empires {
-		if got.Empires[i].Empire != e.Empire || got.Empires[i].Active != e.Active {
+		if got.Empires[i].ID != e.ID || got.Empires[i].Active != e.Active {
 			t.Errorf("empire[%d]: expected %+v, got %+v", i, e, got.Empires[i])
 		}
+	}
+}
+
+func TestReadGameMissing(t *testing.T) {
+	dir := t.TempDir()
+	store := filestore.NewStore("")
+
+	if _, err := store.ReadGame(dir); err == nil {
+		t.Fatal("expected error reading missing game.json, got nil")
 	}
 }
 
@@ -71,14 +80,5 @@ func TestAuthConfigRoundTrip(t *testing.T) {
 		if gotLink.Empire != link.Empire {
 			t.Errorf("magic link %q: expected empire %d, got %d", uuid, link.Empire, gotLink.Empire)
 		}
-	}
-}
-
-func TestReadGameConfigMissing(t *testing.T) {
-	dir := t.TempDir()
-	store := filestore.NewStore("")
-
-	if _, err := store.ReadGameConfig(dir); err == nil {
-		t.Fatal("expected error reading missing game.json, got nil")
 	}
 }

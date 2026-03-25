@@ -24,8 +24,8 @@ func (s *Store) ValidateDir(dirPath string) error {
 	return nil
 }
 
-// GameConfigExists reports whether game.json exists in dirPath.
-func (s *Store) GameConfigExists(dirPath string) (bool, error) {
+// GameExists reports whether game.json exists in dirPath.
+func (s *Store) GameExists(dirPath string) (bool, error) {
 	_, err := os.Stat(filepath.Join(dirPath, "game.json"))
 	if err == nil {
 		return true, nil
@@ -48,25 +48,25 @@ func (s *Store) AuthConfigExists(dirPath string) (bool, error) {
 	return false, err
 }
 
-// ReadGameConfig reads game.json from dirPath and returns the parsed GameConfig.
-func (s *Store) ReadGameConfig(dirPath string) (domain.GameConfig, error) {
+// ReadGame reads game.json from dirPath and returns the parsed Game.
+func (s *Store) ReadGame(dirPath string) (domain.Game, error) {
 	path := filepath.Join(dirPath, "game.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return domain.GameConfig{}, fmt.Errorf("reading game.json: %w", err)
+		return domain.Game{}, fmt.Errorf("reading game.json: %w", err)
 	}
-	var cfg domain.GameConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return domain.GameConfig{}, fmt.Errorf("parsing game.json: %w", err)
+	var game domain.Game
+	if err := json.Unmarshal(data, &game); err != nil {
+		return domain.Game{}, fmt.Errorf("parsing game.json: %w", err)
 	}
-	return cfg, nil
+	return game, nil
 }
 
-// WriteGameConfig marshals cfg as indented JSON and writes it to game.json in dirPath.
-func (s *Store) WriteGameConfig(dirPath string, cfg domain.GameConfig) error {
-	data, err := json.MarshalIndent(cfg, "", "  ")
+// WriteGame marshals game as indented JSON and writes it to game.json in dirPath.
+func (s *Store) WriteGame(dirPath string, game domain.Game) error {
+	data, err := json.MarshalIndent(game, "", "  ")
 	if err != nil {
-		return fmt.Errorf("marshaling game config: %w", err)
+		return fmt.Errorf("marshaling game: %w", err)
 	}
 	data = append(data, '\n')
 	path := filepath.Join(dirPath, "game.json")

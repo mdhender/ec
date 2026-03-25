@@ -13,19 +13,17 @@ import (
 
 // ClusterService orchestrates cluster generation use cases.
 type ClusterService struct {
-	Reader     ClusterReader
-	Writer     ClusterWriter
-	GameWriter GameWriter
+	Writer ClusterWriter
 }
 
 // CreateCluster generates one cluster and writes it to disk.
-func (s *ClusterService) CreateCluster(seed1, seed2 uint64, outputPath string, overwrite bool) (domain.Cluster, error) {
+func (s *ClusterService) CreateCluster(seed1, seed2 uint64, dataPath string, overwrite bool) (domain.Cluster, error) {
 	r := prng.New(rand.NewPCG(seed1, seed2))
 	cluster, err := clustergen.GenerateCluster(r)
 	if err != nil {
 		return domain.Cluster{}, fmt.Errorf("createCluster: %w", err)
 	}
-	if err := s.Writer.WriteCluster(outputPath, cluster, overwrite); err != nil {
+	if err := s.Writer.WriteCluster(dataPath, cluster, overwrite); err != nil {
 		return domain.Cluster{}, fmt.Errorf("createCluster: %w", err)
 	}
 	return cluster, nil
@@ -43,17 +41,4 @@ func (s *ClusterService) TestCluster(seed1, seed2 uint64, iterations int) (*clus
 		stats.Collect(cluster)
 	}
 	return stats, nil
-}
-
-// CreateGame reads a cluster file and writes a game file.
-func (s *ClusterService) CreateGame(systemsPath, savePath string, overwrite bool) error {
-	cluster, err := s.Reader.ReadCluster(systemsPath)
-	if err != nil {
-		return fmt.Errorf("createGame: %w", err)
-	}
-	game := &domain.Game{Cluster: cluster}
-	if err := s.GameWriter.WriteGame(savePath, game, overwrite); err != nil {
-		return fmt.Errorf("createGame: %w", err)
-	}
-	return nil
 }
