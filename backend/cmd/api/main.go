@@ -11,7 +11,6 @@ import (
 
 	"github.com/mdhender/ec"
 	"github.com/mdhender/ec/internal/dotfiles"
-	"github.com/mdhender/ec/internal/fsck"
 	"github.com/mdhender/ec/internal/runtime/server"
 	"github.com/spf13/cobra"
 )
@@ -164,7 +163,7 @@ func cmdServe() *cobra.Command {
 			if jwtSecret == "" {
 				return fmt.Errorf("serve: --jwt-secret is required (or set EC_JWT_SECRET)")
 			}
-			if !fsck.IsDir(dataPath) {
+			if fi, err := os.Stat(dataPath); err != nil || !fi.IsDir() {
 				return fmt.Errorf("serve: data-path %q is not a directory", dataPath)
 			}
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/mdhender/ec"
 	"github.com/mdhender/ec/internal/dotfiles"
+	runtimecli "github.com/mdhender/ec/internal/runtime/cli"
 	"github.com/spf13/cobra"
 )
 
@@ -90,7 +91,9 @@ func main() {
 		},
 	}
 
+	runtimecli.AddCommands(cmdRoot)
 	cmdRoot.AddCommand(cmdShow())
+
 	err := addFlags(cmdRoot)
 	if err != nil {
 		logger.Error("root: addFlags",

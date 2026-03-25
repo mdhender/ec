@@ -1,0 +1,183 @@
+// Copyright (c) 2026 Michael D Henderson. All rights reserved.
+
+package domain
+
+// Cluster contains all the objects in the cluster.
+type Cluster struct {
+	Systems  []System
+	Stars    []Star
+	Planets  []Planet
+	Deposits []Deposit
+	Colonies []Colony
+	Ships    []Ship
+}
+
+type SystemID int
+
+type System struct {
+	ID       SystemID
+	Display  string // Display label: "XX-YY-ZZ"
+	Location Coords
+	Stars    []StarID // ordered by sequence
+}
+
+type Coords struct {
+	X int
+	Y int
+	Z int
+}
+
+func (c Coords) Less(c2 Coords) bool {
+	if c.X != c2.X {
+		return c.X < c2.X
+	}
+	if c.Y != c2.Y {
+		return c.Y < c2.Y
+	}
+	return c.Z < c2.Z
+}
+
+type StarID int
+
+type Star struct {
+	ID       StarID
+	Sequence int
+	Display  string       // Display label: "XX-YY-ZZ" or "XX-YY-ZZ/S" (per § 5).
+	System   SystemID     // parent system
+	Orbits   [10]PlanetID // index 0 = Orbit 1, index 9 = Orbit 10; value 0 means empty
+}
+
+type PlanetID int
+
+type Planet struct {
+	ID           PlanetID
+	Kind         PlanetKind
+	Habitability int
+	Deposits     []DepositID
+}
+
+// PlanetKind classifies the contents of a star's orbit per § 4.1.
+// Ordering matters: Terrestrial < AsteroidBelt < GasGiant is used when sorting.
+type PlanetKind int
+
+const (
+	Terrestrial PlanetKind = iota + 1
+	AsteroidBelt
+	GasGiant
+)
+
+func (k PlanetKind) String() string {
+	switch k {
+	case Terrestrial:
+		return "Terrestrial"
+	case AsteroidBelt:
+		return "Asteroid Belt"
+	case GasGiant:
+		return "Gas Giant"
+	default:
+		return "Unknown"
+	}
+}
+
+type DepositID int
+
+type Deposit struct {
+	ID                DepositID
+	Resource          NaturalResource
+	YieldPct          int // 1..100
+	QuantityRemaining int
+}
+
+type NaturalResource int
+
+const (
+	GOLD NaturalResource = iota + 1
+	FUEL
+	METALLICS
+	NONMETALLICS
+)
+
+func (r NaturalResource) String() string {
+	switch r {
+	case GOLD:
+		return "Gold"
+	case FUEL:
+		return "Fuel"
+	case METALLICS:
+		return "Metallics"
+	case NONMETALLICS:
+		return "Non-Metallics"
+	default:
+		return "Unknown"
+	}
+}
+
+type TechLevel int
+
+type ColonyID int
+
+type Colony struct {
+	ID        ColonyID
+	Empire    EmpireID
+	Location  Coords
+	TechLevel TechLevel
+}
+
+type ShipID int
+
+type Ship struct {
+	ID        ShipID
+	Empire    EmpireID
+	Location  Coords
+	TechLevel TechLevel
+}
+
+type UnitKind int
+
+const (
+	// Population
+	Unemployables UnitKind = iota + 1
+	UnskilledWorkers
+	Professionals
+	Soldiers
+	Spies
+	ConstructionWorkers
+	Rebels
+
+	// Weapons
+	AssaultCraft
+	AssaultWeapon
+	AntiMissile
+	EnergyShield
+	EnergyWeapon
+	MilitaryRobot
+	MilitarySupply
+	Missile
+	MissileLauncher
+
+	// Production
+	Farm
+	Factory
+	Mine
+
+	// Miscellaneous
+	Automation
+	ConsumerGoods
+	Food
+	HyperEngine
+	LifeSupport
+	LightStructural
+	Sensor
+	SpaceDrive
+	Structural
+	Transport
+
+	// Uncategorized
+	ResearchPoint
+)
+
+type Inventory struct {
+	Unit              UnitKind
+	TechLevel         TechLevel
+	QuantityAssembled int
+}

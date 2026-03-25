@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/mdhender/ec/internal/fsck"
 )
 
 // dotfiles tries to emulate the priority list from the dotenv page at
@@ -50,7 +49,7 @@ func Load(prefix string, logger *slog.Logger) error {
 	// local environment files are the highest priority
 	for _, local := range []string{"development", "test", "production"} {
 		if local == env {
-			if envfile := ".env." + local + ".local"; fsck.IsFile(envfile) {
+			if envfile := ".env." + local + ".local"; isFile(envfile) {
 				if err := godotenv.Load(envfile); err != nil {
 					return err
 				}
@@ -61,7 +60,7 @@ func Load(prefix string, logger *slog.Logger) error {
 
 	// .env.local is loaded for all environments except test.
 	if env != "test" {
-		if envfile := ".env.local"; fsck.IsFile(envfile) {
+		if envfile := ".env.local"; isFile(envfile) {
 			if err := godotenv.Load(envfile); err != nil {
 				return err
 			}
@@ -72,7 +71,7 @@ func Load(prefix string, logger *slog.Logger) error {
 	// shared environment specific settings
 	for _, shared := range []string{"development", "test", "production"} {
 		if shared == env {
-			if envfile := ".env." + shared; fsck.IsFile(envfile) {
+			if envfile := ".env." + shared; isFile(envfile) {
 				if err := godotenv.Load(envfile); err != nil {
 					return err
 				}
@@ -82,7 +81,7 @@ func Load(prefix string, logger *slog.Logger) error {
 	}
 
 	// .env is the lowest priority
-	if envfile := ".env"; fsck.IsFile(envfile) {
+	if envfile := ".env"; isFile(envfile) {
 		if err := godotenv.Load(envfile); err != nil {
 			return err
 		}
@@ -90,4 +89,9 @@ func Load(prefix string, logger *slog.Logger) error {
 	}
 
 	return nil
+}
+
+func isFile(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && !fi.IsDir() && fi.Mode().IsRegular()
 }
