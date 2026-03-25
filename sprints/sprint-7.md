@@ -102,7 +102,7 @@ instantiates and injects concrete implementations.
 type Game struct { Cluster Cluster; Empires []Empire }
 type Empire struct { ID EmpireID; Name string; HomeWorld PlanetID; Colonies []ColonyID; Ships []ShipID }
 
-// domain/game_config.go  ← DELETED in Task 4
+// domain/game_config.go  ← DELETED in Task 5
 type GameConfig struct { Empires []EmpireEntry }
 type EmpireEntry struct { Empire int; Active bool }
 
@@ -197,7 +197,7 @@ code it depends on exclusively.
 
 3. **`app/cluster_ports.go`**: delete the `GameWriter` interface. Delete the
    `ClusterReader` interface (its single caller, `CreateGame`, is gone; a new
-   `ClusterStore` interface will replace it in Task 6a).
+   `ClusterStore` interface will replace it in Task 6).
 
 4. **`infra/filestore/cluster.go`**: delete `WriteGame`. Delete `ReadCluster`
    if it is no longer needed after removing `ClusterReader`. (If `ReadCluster`
@@ -245,7 +245,7 @@ that does not break any existing code.
    ```
 
 Do **not** delete `GameConfig` or `EmpireEntry` in this task — they are still
-referenced by `app` and `infra` layers. Deletion happens in Task 4 after
+referenced by `app` and `infra` layers. Deletion happens in Task 5 after
 storage is migrated.
 
 **Acceptance criteria:**
@@ -259,21 +259,23 @@ storage is migrated.
 
 ---
 
-### Task 5: Domain — add Race/HomeWorld types, remove Cluster from Game, add Coords.Distance
+### Task 4: Domain — add Race/HomeWorld types, remove Cluster from Game, add Coords.Distance
 
 **Subsystem:** `domain`
 **Files:**
 - `backend/internal/domain/game.go`
 - `backend/internal/domain/cluster.go`
-**Depends on:** Task 3
+**Depends on:** Tasks 2, 3
 
 **What to do:**
 
 Add the domain types needed for homeworld placement and race tracking. Also
 remove `Cluster` from `Game` (it now lives in a separate `cluster.json`).
 
-**Important:** This task must run before Task 4 so that `domain.Game` has its
-final shape before storage is migrated to use it.
+**Important:** Task 2 must be completed first — it deletes
+`ClusterService.CreateGame`, which references `domain.Game{Cluster: cluster}`.
+Without that deletion, removing the `Cluster` field from `Game` would break
+the build.
 
 1. **`domain/game.go`** — add:
 
@@ -324,14 +326,8 @@ final shape before storage is migrated to use it.
    }
    ```
 
-**Note on build state:** After this task, the code may not compile because
-`app/cluster_service.go` references `domain.Game{Cluster: cluster}` in
-`ClusterService.CreateGame`. However, if Task 2 has already been completed
-(deleting `CreateGame`), the build will remain green. **Task 2 must be
-completed before this task.**
-
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds (requires Task 2 completed first)
+- [ ] `cd backend && go build ./...` succeeds
 - [ ] `domain.Race`, `domain.RaceID` exist
 - [ ] `domain.Game` has `Races []Race` and `ActiveHomeWorldID PlanetID`; no `Cluster` field
 - [ ] `domain.Empire` has `Race RaceID`
@@ -345,7 +341,7 @@ completed before this task.**
 
 ---
 
-### Task 4: Migrate game config storage to domain.Game; delete GameConfig
+### Task 5: Migrate game config storage to domain.Game; delete GameConfig
 
 **Subsystem:** `app/game_config_ports`, `app/game_config_service`, `infra/filestore`
 **Files:**
@@ -355,7 +351,7 @@ completed before this task.**
 - `backend/internal/app/game_config_service_test.go`
 - `backend/internal/infra/filestore/game_config_test.go`
 - `backend/internal/domain/game_config.go`
-**Depends on:** Task 5 (domain.Game must have its final shape first)
+**Depends on:** Task 4 (domain.Game must have its final shape first)
 
 **What to do:**
 
@@ -415,7 +411,7 @@ the game config storage layer, then delete `GameConfig` and `EmpireEntry`.
 
 ---
 
-### Task 6a: Add ClusterStore interface and update filestore.ReadCluster
+### Task 6: Add ClusterStore interface and update filestore.ReadCluster
 
 **Subsystem:** `app/cluster_ports`, `infra/filestore`
 **Files:**
@@ -460,14 +456,14 @@ After this task, `filestore.Store` satisfies both `ClusterWriter` and the new
 
 ---
 
-### Task 6b: Implement CreateHomeWorld service logic
+### Task 7: Implement CreateHomeWorld service logic
 
 **Subsystem:** `app/game_config_service`
 **Files:**
 - `backend/internal/app/game_config_ports.go`
 - `backend/internal/app/game_config_service.go`
 - `backend/internal/app/game_config_service_test.go`
-**Depends on:** Tasks 4, 5, 6a
+**Depends on:** Tasks 5, 6
 
 **What to do:**
 
@@ -558,13 +554,13 @@ Behavior:
 
 ---
 
-### Task 6c: Add `create homeworld` CLI command and runtime wiring
+### Task 8: Add `create homeworld` CLI command and runtime wiring
 
 **Subsystem:** `delivery/cli`, `runtime/cli`
 **Files:**
 - `backend/internal/delivery/cli/game_config.go`
 - `backend/internal/runtime/cli/cli.go`
-**Depends on:** Task 6b
+**Depends on:** Task 7
 
 **What to do:**
 
@@ -595,17 +591,17 @@ planet ID.
 - [ ] Missing `--data-path` produces a clear error
 
 **Tests to add/update:**
-- None — CLI commands are validated via build and integration testing in Task 8.
+- None — CLI commands are validated via build and integration testing in Task 12.
 
 ---
 
-### Task 7a: Update AddEmpire service to assign race and starting colony
+### Task 9: Update AddEmpire service to assign race and starting colony
 
 **Subsystem:** `app/game_config_service`
 **Files:**
 - `backend/internal/app/game_config_service.go`
 - `backend/internal/app/game_config_service_test.go`
-**Depends on:** Task 6b
+**Depends on:** Task 7
 
 **What to do:**
 
@@ -708,12 +704,12 @@ continue to work:
 
 ---
 
-### Task 7b: Update `create empire` CLI command with new flags
+### Task 10: Update `create empire` CLI command with new flags
 
 **Subsystem:** `delivery/cli`
 **Files:**
 - `backend/internal/delivery/cli/game_config.go`
-**Depends on:** Task 7a
+**Depends on:** Task 9
 
 **What to do:**
 
@@ -737,15 +733,80 @@ the updated `AddEmpire` service method.
 - [ ] `cli create empire --data-path /dir --homeworld 42` passes the homeworld ID
 
 **Tests to add/update:**
-- None — CLI commands are validated via build and integration testing in Task 8.
+- None — CLI commands are validated via build and integration testing in Task 12.
 
 ---
 
-### Task 8: Verify build, clean up, run full test suite
+### Task 11: Audit for code smells and SOUSA compliance
+
+**Subsystem:** all
+**Files:** all files touched in Tasks 1–10
+**Depends on:** Tasks 1–10
+
+**What to do:**
+
+Review all code changed in this sprint for SOUSA layering violations, code
+smells, and consistency issues. The canonical SOUSA reference is
+`docs/SOUSA.md`.
+
+1. **SOUSA import audit** — verify no layering violations were introduced:
+   ```bash
+   # domain must not import app, infra, delivery, or runtime
+   grep -r '"github.com/mdhender/ec/internal/app\|infra\|delivery\|runtime"' backend/internal/domain/
+
+   # app must not import infra, delivery, runtime, or framework packages
+   grep -r '"github.com/mdhender/ec/internal/infra\|delivery\|runtime"' backend/internal/app/
+   grep -r '"github.com/peterbourgon/ff\|labstack/echo"' backend/internal/app/
+
+   # delivery must not import infra
+   grep -r '"github.com/mdhender/ec/internal/infra"' backend/internal/delivery/
+   ```
+   Fix any violations found.
+
+2. **Game logic in wrong layer** — verify that `delivery/cli` commands contain
+   no game logic (homeworld selection, distance calculations, name scrubbing).
+   All game logic must live in `app` or `domain`.
+
+3. **Unused code** — search for any dead code left behind by the refactoring:
+   - Unused imports
+   - Unreferenced types or functions
+   - Orphaned test helpers
+
+4. **Naming consistency** — verify:
+   - `HomeWorld` (capital W) is used consistently in all field names
+   - No stale `GameConfig`/`EmpireEntry` references remain
+   - Port interface names match their implementations
+
+5. **Error quality** — spot-check that error messages from new service methods
+   include enough context to diagnose problems (which planet, which homeworld,
+   what distance).
+
+6. **Run `go vet`:**
+   ```bash
+   cd backend && go vet ./...
+   ```
+   Fix any warnings.
+
+**Acceptance criteria:**
+- [ ] No SOUSA import violations exist
+- [ ] No game logic in `delivery/cli` — all logic is in `app` or `domain`
+- [ ] No unused code (imports, types, functions, test helpers)
+- [ ] `HomeWorld` spelling is consistent everywhere
+- [ ] No stale `GameConfig`/`EmpireEntry` references
+- [ ] `cd backend && go vet ./...` passes
+- [ ] All error messages include sufficient diagnostic context
+
+**Tests to add/update:**
+- None — this is an audit task. Fix any issues found in the files where they
+  occur.
+
+---
+
+### Task 12: Verify build, clean up, run full test suite
 
 **Subsystem:** all
 **Files:** any remaining references
-**Depends on:** Tasks 1–7b
+**Depends on:** Task 11
 
 **What to do:**
 
@@ -785,16 +846,17 @@ the updated `AddEmpire` service method.
 
 ## Task Summary
 
-| Task | Title                                                  | Status | Depends On   | Agent/Thread | Notes |
-|------|--------------------------------------------------------|--------|--------------|--------------|-------|
-| 1    | Restructure cluster file location                      | TODO   | —            |              |       |
-| 2    | Delete `create game-state` and related code            | TODO   | 1            |              |       |
-| 3    | Domain: add Empire.Active                              | TODO   | —            |              |       |
-| 5    | Domain: add Race/HomeWorld types, Coords.Distance      | TODO   | 2, 3         |              |       |
-| 4    | Migrate game config storage; delete GameConfig         | TODO   | 5            |              |       |
-| 6a   | Add ClusterStore interface + update ReadCluster        | TODO   | 1            |              |       |
-| 6b   | Implement CreateHomeWorld service logic                 | TODO   | 4, 5, 6a     |              |       |
-| 6c   | Add `create homeworld` CLI command + wiring            | TODO   | 6b           |              |       |
-| 7a   | Update AddEmpire service with race + colony            | TODO   | 6b           |              |       |
-| 7b   | Update `create empire` CLI with new flags              | TODO   | 7a           |              |       |
-| 8    | Verify build, clean up, full test suite                | TODO   | 1–7b         |              |       |
+| Task | Title                                                  | Status | Depends On | Agent/Thread | Notes |
+|------|--------------------------------------------------------|--------|------------|--------------|-------|
+| 1    | Restructure cluster file location                      | TODO   | —          |              |       |
+| 2    | Delete `create game-state` and related code            | TODO   | 1          |              |       |
+| 3    | Domain: add Empire.Active                              | TODO   | —          |              |       |
+| 4    | Domain: add Race/HomeWorld types, Coords.Distance      | TODO   | 2, 3       |              |       |
+| 5    | Migrate game config storage; delete GameConfig         | TODO   | 4          |              |       |
+| 6    | Add ClusterStore interface + update ReadCluster        | TODO   | 1          |              |       |
+| 7    | Implement CreateHomeWorld service logic                 | TODO   | 5, 6       |              |       |
+| 8    | Add `create homeworld` CLI command + wiring            | TODO   | 7          |              |       |
+| 9    | Update AddEmpire service with race + colony            | TODO   | 7          |              |       |
+| 10   | Update `create empire` CLI with new flags              | TODO   | 9          |              |       |
+| 11   | Audit for code smells and SOUSA compliance             | TODO   | 1–10       |              |       |
+| 12   | Verify build, clean up, full test suite                | TODO   | 11         |              |       |
