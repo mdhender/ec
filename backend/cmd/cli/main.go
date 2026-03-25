@@ -92,7 +92,6 @@ func main() {
 	}
 
 	runtimecli.AddCommands(cmdRoot)
-	cmdRoot.AddCommand(cmdShow())
 
 	err := addFlags(cmdRoot)
 	if err != nil {
@@ -140,49 +139,4 @@ func resolveString(cmd *cobra.Command, flagName, envVar, fallback string) string
 		return v
 	}
 	return fallback
-}
-
-func cmdShow() *cobra.Command {
-	addFlags := func(cmd *cobra.Command) error {
-		return nil
-	}
-	cmd := &cobra.Command{
-		Use:   "show",
-		Short: "show things",
-	}
-	if err := addFlags(cmd); err != nil {
-		logger.Error("show: addFlags",
-			"err", err,
-		)
-		os.Exit(1)
-	}
-	cmd.AddCommand(cmdShowVersion())
-	return cmd
-}
-
-func cmdShowVersion() *cobra.Command {
-	showBuildInfo := false
-	addFlags := func(cmd *cobra.Command) error {
-		cmd.Flags().BoolVar(&showBuildInfo, "build-info", showBuildInfo, "show build information")
-		return nil
-	}
-	var cmd = &cobra.Command{
-		Use:   "version",
-		Short: "display the application's version number",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if showBuildInfo {
-				fmt.Println(ec.Version().String())
-				return nil
-			}
-			fmt.Println(ec.Version().Core())
-			return nil
-		},
-	}
-	if err := addFlags(cmd); err != nil {
-		logger.Error("show: version",
-			"err", err,
-		)
-		os.Exit(1)
-	}
-	return cmd
 }

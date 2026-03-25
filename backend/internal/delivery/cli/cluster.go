@@ -59,15 +59,15 @@ func CmdTestCluster(svc *app.ClusterService) *cobra.Command {
 	return cmd
 }
 
-// CmdCreateGame returns a cobra command that creates a game from a systems file.
-func CmdCreateGame(svc *app.ClusterService) *cobra.Command {
+// CmdCreateGameState returns a cobra command that creates a game from a cluster file.
+func CmdCreateGameState(svc *app.ClusterService) *cobra.Command {
 	var clusterPath string
 	var savePath string
 	var overwrite bool
 
 	cmd := &cobra.Command{
-		Use:   "game",
-		Short: "create a new game from a cluster file",
+		Use:   "game-state",
+		Short: "create a new game state from a cluster file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := svc.CreateGame(clusterPath, savePath, overwrite); err != nil {
 				return err

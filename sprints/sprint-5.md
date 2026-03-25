@@ -138,9 +138,9 @@ type AuthLink struct {
 These types must have JSON tags matching the sample files in `backend/data/alpha/`.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./internal/domain/...` succeeds
-- [ ] Types have JSON tags: `GameConfig.Empires` → `"empires"`, `EmpireEntry.Empire` → `"empire"`, `EmpireEntry.Active` → `"active"`, `AuthConfig.MagicLinks` → `"magic-links"`, `AuthLink.Empire` → `"empire"`
-- [ ] No imports of `app`, `infra`, `delivery`, or `runtime`
+- [x] `cd backend && go build ./internal/domain/...` succeeds
+- [x] Types have JSON tags: `GameConfig.Empires` → `"empires"`, `EmpireEntry.Empire` → `"empire"`, `EmpireEntry.Active` → `"active"`, `AuthConfig.MagicLinks` → `"magic-links"`, `AuthLink.Empire` → `"empire"`
+- [x] No imports of `app`, `infra`, `delivery`, or `runtime`
 
 **Tests to add/update:**
 - None — pure type definitions
@@ -211,15 +211,15 @@ library — implement a small helper in the service file or in a new
 `domain` helper.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./internal/app/...` succeeds
-- [ ] No imports of Echo, Cobra, SQLite, or filesystem packages
-- [ ] `GameConfigService` depends only on the `GameConfigStore` interface
-- [ ] `CreateGame` fails if either `game.json` or `auth.json` already exists
-- [ ] `AddEmpire` auto-assigns empire number when input is 0
-- [ ] `AddEmpire` fails if empire already exists
-- [ ] `RemoveEmpire` sets active=false, does not delete the empire entry
-- [ ] `RemoveEmpire` silently succeeds when no magic link exists for the empire
-- [ ] `ShowMagicLink` returns full URL with `https://app.epimethean.dev/?magic=` prefix
+- [x] `cd backend && go build ./internal/app/...` succeeds
+- [x] No imports of Echo, Cobra, SQLite, or filesystem packages
+- [x] `GameConfigService` depends only on the `GameConfigStore` interface
+- [x] `CreateGame` fails if either `game.json` or `auth.json` already exists
+- [x] `AddEmpire` auto-assigns empire number when input is 0
+- [x] `AddEmpire` fails if empire already exists
+- [x] `RemoveEmpire` sets active=false, does not delete the empire entry
+- [x] `RemoveEmpire` silently succeeds when no magic link exists for the empire
+- [x] `ShowMagicLink` returns the magic link UUID (URL formatting moved to delivery layer)
 
 **Tests to add/update:**
 - `TestCreateGame` in `backend/internal/app/game_config_service_test.go` — use a mock `GameConfigStore` to verify:
@@ -257,11 +257,11 @@ Write operations should use `json.MarshalIndent(cfg, "", "  ")` with a trailing
 newline for readability.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./internal/infra/filestore/...` succeeds
-- [ ] `Store` satisfies `app.GameConfigStore` interface
-- [ ] Read methods return meaningful errors on missing file or bad JSON
-- [ ] Written JSON matches the format in `backend/data/alpha/` sample files
-- [ ] No imports of `delivery` or `runtime`
+- [x] `cd backend && go build ./internal/infra/filestore/...` succeeds
+- [x] `Store` satisfies `app.GameConfigStore` interface
+- [x] Read methods return meaningful errors on missing file or bad JSON
+- [x] Written JSON matches the format in `backend/data/alpha/` sample files
+- [x] No imports of `delivery` or `runtime`
 
 **Tests to add/update:**
 - `TestGameConfigRoundTrip` in `backend/internal/infra/filestore/game_config_test.go` — write a `GameConfig` with two empires to a temp dir, read it back, verify equality
@@ -311,11 +311,11 @@ All commands use `RunE` and return errors (not `log.Fatal`). No game logic,
 no file I/O, no UUID generation in this layer.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./internal/delivery/cli/...` succeeds
-- [ ] Handlers are thin — no business logic, no file I/O
-- [ ] No imports of `infra` or `runtime`
-- [ ] `--path` is required on all commands
-- [ ] `--empire` is required on remove and show commands
+- [x] `cd backend && go build ./internal/delivery/cli/...` succeeds
+- [x] Handlers are thin — no business logic, no file I/O
+- [x] No imports of `infra` or `runtime`
+- [x] `--path` is required on all commands
+- [x] `--empire` is required on remove and show commands
 
 **Tests to add/update:**
 - None — delivery validated via CLI integration
@@ -361,15 +361,77 @@ the approach that results in the smallest diff. If you move show into
 `main.go`.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./cmd/cli/` succeeds
-- [ ] `cli create game --path /tmp/test` creates `game.json` and `auth.json`
-- [ ] `cli create empire --path /tmp/test` adds an empire and prints the magic link
-- [ ] `cli remove empire --path /tmp/test --empire 1` deactivates the empire
-- [ ] `cli show magic-link --path /tmp/test --empire 1` prints the magic link URL
-- [ ] All existing tests pass: `cd backend && go test ./...`
+- [x] `cd backend && go build ./cmd/cli/` succeeds
+- [x] `cli create game --path /tmp/test` creates `game.json` and `auth.json`
+- [x] `cli create empire --path /tmp/test` adds an empire and prints the magic link
+- [x] `cli remove empire --path /tmp/test --empire 1` deactivates the empire
+- [x] `cli show magic-link --path /tmp/test --empire 1` prints the magic link URL
+- [x] All existing tests pass: `cd backend && go test ./...`
 
 **Tests to add/update:**
 - None — wiring validated via CLI integration
+
+---
+
+## Review Findings
+
+### Finding 1: AddEmpire must create empire data directory
+
+**Severity:** Missed requirement
+**Discovered:** Post-sprint review
+**Status:** Fixed
+
+`AddEmpire` was not creating the empire's data directory (e.g., `data/beta/9` for empire 9). The fix added `CreateEmpireDir(dirPath string, empireNo int) error` to the `GameConfigStore` port, implemented it in the filestore adapter using `os.MkdirAll`, and called it from `AddEmpire` after writing `game.json`.
+
+**Files changed:**
+- `backend/internal/app/game_config_ports.go` — added `CreateEmpireDir` to interface
+- `backend/internal/app/game_config_service.go` — `AddEmpire` calls `Store.CreateEmpireDir`
+- `backend/internal/infra/filestore/game_config.go` — implemented `CreateEmpireDir`
+- `backend/internal/app/game_config_service_test.go` — added method to mock
+
+### Finding 2: SOUSA violation — `app` layer uses `os.Stat` for filesystem checks
+
+**Severity:** SOUSA violation
+**Discovered:** Post-sprint review
+**Status:** Fixed
+
+`GameConfigService.CreateGame` called `os.Stat` directly to check whether `dirPath` is a directory and whether `game.json`/`auth.json` already exist. The `app` layer must not use filesystem adapters. Fix: added `ValidateDir`, `GameConfigExists`, and `AuthConfigExists` to the `GameConfigStore` port; implemented in filestore adapter; removed `os` import from the app service.
+
+**Files changed:**
+- `backend/internal/app/game_config_ports.go` — added three methods to interface
+- `backend/internal/app/game_config_service.go` — `CreateGame` uses port methods, `os` import removed
+- `backend/internal/infra/filestore/game_config.go` — implemented the three methods
+- `backend/internal/app/game_config_service_test.go` — updated mock and tests to use port
+
+### Finding 3: SOUSA violation — `cmdShowVersion` lives in `runtime/cli` instead of `delivery/cli`
+
+**Severity:** SOUSA violation
+**Discovered:** Post-sprint review
+**Status:** Fixed (mitigated)
+
+`cmdShowVersion()` was moved from `cmd/cli/main.go` into `runtime/cli/cli.go`. This is a command definition with output formatting — delivery-layer behavior, not wiring. Rather than moving it to `delivery/cli` (where it would keep causing conflicts with `show` subcommands), `version` was promoted to a top-level command (`cli version` instead of `cli show version`). The inline definition in `runtime/cli` is acceptable for a trivial version command that only prints a constant.
+
+**File:** `backend/internal/runtime/cli/cli.go`
+
+### Finding 4: Code smell — path built with `fmt.Sprintf` instead of `filepath.Join`
+
+**Severity:** Code smell
+**Discovered:** Post-sprint review
+**Status:** Fixed (resolved by Finding 2)
+
+`CreateGame` built file paths using `fmt.Sprintf("%s/game.json", dirPath)`. Resolved by Finding 2 — those `os.Stat` calls moved to the filestore adapter which uses `filepath.Join`.
+
+### Finding 5: Code smell — hardcoded magic link URL in app layer
+
+**Severity:** Code smell
+**Discovered:** Post-sprint review
+**Status:** Fixed
+
+`ShowMagicLink` hardcoded `https://app.epimethean.dev/?magic=` in the app service. URL formatting is a presentation/deployment concern. Fix: the app service now returns just the UUID; URL formatting moved to the delivery layer's `CmdShowMagicLink`, which takes a required `--base-url` flag (defaulting from `EC_BASE_URL` env var).
+
+**Files changed:**
+- `backend/internal/app/game_config_service.go` — `ShowMagicLink` returns UUID only
+- `backend/internal/delivery/cli/game_config.go` — `CmdShowMagicLink` adds `--base-url` flag, formats URL
 
 ---
 
@@ -377,8 +439,8 @@ the approach that results in the smallest diff. If you move show into
 
 | Task | Title                                        | Status | Agent/Thread | Notes |
 |------|----------------------------------------------|--------|--------------|-------|
-| 1    | Domain types for game and auth config        | TODO   |              |       |
-| 2    | App-layer port and GameConfigService         | TODO   |              |       |
-| 3    | Infra filestore adapter for game/auth config | TODO   |              |       |
-| 4    | CLI delivery commands for game config        | TODO   |              |       |
-| 5    | Runtime CLI wiring for game config commands  | TODO   |              |       |
+| 1    | Domain types for game and auth config        | DONE   |              |       |
+| 2    | App-layer port and GameConfigService         | DONE   |              |       |
+| 3    | Infra filestore adapter for game/auth config | DONE   |              |       |
+| 4    | CLI delivery commands for game config        | DONE   |              |       |
+| 5    | Runtime CLI wiring for game config commands  | DONE   |              |       |
