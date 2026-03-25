@@ -1,6 +1,6 @@
 ---
 title: "Sprint 1: The API Server Lives"
-date: 2026-03-24
+date: 2026-03-24T14:43:00
 ---
 
 {{< callout type="info" >}}

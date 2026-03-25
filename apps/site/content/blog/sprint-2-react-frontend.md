@@ -1,6 +1,6 @@
 ---
 title: "Sprint 2: The Frontend Arrives"
-date: 2026-03-24
+date: 2026-03-24T16:59:00
 ---
 
 {{< callout type="info" >}}

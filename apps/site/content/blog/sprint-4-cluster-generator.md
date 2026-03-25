@@ -1,6 +1,6 @@
 ---
 title: "Sprint 4: Stars in the Machine"
-date: 2026-03-24
+date: 2026-03-24T21:30:00
 ---
 
 {{< callout type="info" >}}
