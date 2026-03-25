@@ -4,9 +4,9 @@ package app
 
 import "github.com/mdhender/ec/internal/domain"
 
-// GameConfigStore reads and writes game.json and auth.json files.
+// GameStore reads and writes game.json and auth.json files.
 // The path parameter is the directory containing the files.
-type GameConfigStore interface {
+type GameStore interface {
 	ValidateDir(path string) error
 	GameExists(dirPath string) (bool, error)
 	AuthConfigExists(dirPath string) (bool, error)

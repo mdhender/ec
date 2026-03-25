@@ -12,15 +12,15 @@ import (
 	"github.com/mdhender/ec/internal/domain"
 )
 
-// GameConfigService orchestrates game and auth config use cases.
-type GameConfigService struct {
-	Store   GameConfigStore
+// GameService orchestrates game and auth config use cases.
+type GameService struct {
+	Store   GameStore
 	Cluster ClusterStore
 }
 
 // CreateGame initializes an empty game.json and auth.json in dirPath.
 // Returns an error if either file already exists or if dirPath is not a directory.
-func (s *GameConfigService) CreateGame(dirPath string) error {
+func (s *GameService) CreateGame(dirPath string) error {
 	if err := s.Store.ValidateDir(dirPath); err != nil {
 		return fmt.Errorf("createGame: %w", err)
 	}
@@ -47,15 +47,15 @@ func (s *GameConfigService) CreateGame(dirPath string) error {
 // AddEmpire adds a new empire to game.json and a magic link to auth.json.
 // If empireNo is 0, the next empire number is auto-assigned.
 // homeWorldID: if 0, uses game.ActiveHomeWorldID; if still 0, error.
-// Returns the assigned empire number and the generated magic link UUID.
-func (s *GameConfigService) AddEmpire(dirPath string, empireNo int, name string, homeWorldID domain.PlanetID) (int, string, error) {
+// Returns the assigned empire number, the scrubbed name, and the generated magic link UUID.
+func (s *GameService) AddEmpire(dirPath string, empireNo int, name string, homeWorldID domain.PlanetID) (int, string, string, error) {
 	game, err := s.Store.ReadGame(dirPath)
 	if err != nil {
-		return 0, "", fmt.Errorf("addEmpire: %w", err)
+		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
 	cluster, err := s.Cluster.ReadCluster(dirPath)
 	if err != nil {
-		return 0, "", fmt.Errorf("addEmpire: %w", err)
+		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
 
 	// Resolve homeworld
@@ -63,7 +63,7 @@ func (s *GameConfigService) AddEmpire(dirPath string, empireNo int, name string,
 		homeWorldID = game.ActiveHomeWorldID
 	}
 	if homeWorldID == 0 {
-		return 0, "", fmt.Errorf("addEmpire: no active homeworld; use --homeworld or run create homeworld first")
+		return 0, "", "", fmt.Errorf("addEmpire: no active homeworld; use --homeworld or run create homeworld first")
 	}
 
 	// Find the race for this homeworld
@@ -75,19 +75,19 @@ func (s *GameConfigService) AddEmpire(dirPath string, empireNo int, name string,
 		}
 	}
 	if raceIdx == -1 {
-		return 0, "", fmt.Errorf("addEmpire: homeworld %d does not exist", homeWorldID)
+		return 0, "", "", fmt.Errorf("addEmpire: homeworld %d does not exist", homeWorldID)
 	}
 	race := game.Races[raceIdx]
 
 	// Check empire limit per race
 	if len(race.Empires) >= 25 {
-		return 0, "", fmt.Errorf("addEmpire: homeworld %d is full (25 empires)", homeWorldID)
+		return 0, "", "", fmt.Errorf("addEmpire: homeworld %d is full (25 empires)", homeWorldID)
 	}
 
 	// Scrub empire name
 	scrubbedName := scrubEmpireName(name)
 	if scrubbedName == "" {
-		return 0, "", fmt.Errorf("addEmpire: empire name is required")
+		return 0, "", "", fmt.Errorf("addEmpire: empire name is required")
 	}
 
 	// Auto-assign empire number if 0
@@ -104,26 +104,14 @@ func (s *GameConfigService) AddEmpire(dirPath string, empireNo int, name string,
 	// Check for duplicate empire number
 	for _, e := range game.Empires {
 		if int(e.ID) == empireNo {
-			return 0, "", fmt.Errorf("addEmpire: empire %d already exists", empireNo)
+			return 0, "", "", fmt.Errorf("addEmpire: empire %d already exists", empireNo)
 		}
-	}
-
-	// Find homeworld planet in cluster
-	var homePlanet *domain.Planet
-	for i := range cluster.Planets {
-		if cluster.Planets[i].ID == homeWorldID {
-			homePlanet = &cluster.Planets[i]
-			break
-		}
-	}
-	if homePlanet == nil {
-		return 0, "", fmt.Errorf("addEmpire: homeworld planet %d not found in cluster", homeWorldID)
 	}
 
 	// Find the system location for the homeworld planet
 	systemLocation, err := findSystemForPlanet(cluster, homeWorldID)
 	if err != nil {
-		return 0, "", fmt.Errorf("addEmpire: %w", err)
+		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
 
 	// Create starting colony
@@ -151,41 +139,41 @@ func (s *GameConfigService) AddEmpire(dirPath string, empireNo int, name string,
 
 	// Write game.json
 	if err := s.Store.WriteGame(dirPath, game); err != nil {
-		return 0, "", fmt.Errorf("addEmpire: %w", err)
+		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
 
 	// Write cluster.json
 	if err := s.Cluster.WriteCluster(dirPath, cluster, true); err != nil {
-		return 0, "", fmt.Errorf("addEmpire: %w", err)
+		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
 
 	// Create empire directory
 	if err := s.Store.CreateEmpireDir(dirPath, empireNo); err != nil {
-		return 0, "", fmt.Errorf("addEmpire: %w", err)
+		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
 
 	// Generate magic link
 	authCfg, err := s.Store.ReadAuthConfig(dirPath)
 	if err != nil {
-		return 0, "", fmt.Errorf("addEmpire: %w", err)
+		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
 	uuid, err := newUUID()
 	if err != nil {
-		return 0, "", fmt.Errorf("addEmpire: %w", err)
+		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
 	if authCfg.MagicLinks == nil {
 		authCfg.MagicLinks = map[string]domain.AuthLink{}
 	}
 	authCfg.MagicLinks[uuid] = domain.AuthLink{Empire: empireNo}
 	if err := s.Store.WriteAuthConfig(dirPath, authCfg); err != nil {
-		return 0, "", fmt.Errorf("addEmpire: %w", err)
+		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
 
-	return empireNo, uuid, nil
+	return empireNo, scrubbedName, uuid, nil
 }
 
 // RemoveEmpire sets the empire's Active flag to false and removes its magic links.
-func (s *GameConfigService) RemoveEmpire(dirPath string, empireNo int) error {
+func (s *GameService) RemoveEmpire(dirPath string, empireNo int) error {
 	game, err := s.Store.ReadGame(dirPath)
 	if err != nil {
 		return fmt.Errorf("removeEmpire: %w", err)
@@ -222,7 +210,7 @@ func (s *GameConfigService) RemoveEmpire(dirPath string, empireNo int) error {
 }
 
 // ShowMagicLink returns the magic link UUID for the given empire.
-func (s *GameConfigService) ShowMagicLink(dirPath string, empireNo int) (string, error) {
+func (s *GameService) ShowMagicLink(dirPath string, empireNo int) (string, error) {
 	authCfg, err := s.Store.ReadAuthConfig(dirPath)
 	if err != nil {
 		return "", fmt.Errorf("showMagicLink: %w", err)
@@ -238,7 +226,7 @@ func (s *GameConfigService) ShowMagicLink(dirPath string, empireNo int) (string,
 // CreateHomeWorld selects or validates a homeworld planet and records a new Race.
 // If planetID != 0, that specific planet is used.
 // If planetID == 0, a terrestrial planet is auto-selected that is at least minDistance from existing homeworlds.
-func (s *GameConfigService) CreateHomeWorld(dataPath string, planetID domain.PlanetID, minDistance int) (domain.PlanetID, error) {
+func (s *GameService) CreateHomeWorld(dataPath string, planetID domain.PlanetID, minDistance int) (domain.PlanetID, error) {
 	game, err := s.Store.ReadGame(dataPath)
 	if err != nil {
 		return 0, fmt.Errorf("createHomeWorld: %w", err)

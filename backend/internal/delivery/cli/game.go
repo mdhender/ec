@@ -12,7 +12,7 @@ import (
 )
 
 // CmdCreateGame returns an ff.Command that initializes game.json and auth.json in a directory.
-func CmdCreateGame(svc *app.GameConfigService) *ff.Command {
+func CmdCreateGame(svc *app.GameService) *ff.Command {
 	fs := ff.NewFlagSet("game")
 	dataPath := fs.StringLong("data-path", "", "directory to write game.json and auth.json")
 
@@ -35,7 +35,7 @@ func CmdCreateGame(svc *app.GameConfigService) *ff.Command {
 }
 
 // CmdCreateHomeWorld returns an ff.Command that selects or validates a homeworld planet.
-func CmdCreateHomeWorld(svc *app.GameConfigService) *ff.Command {
+func CmdCreateHomeWorld(svc *app.GameService) *ff.Command {
 	fs := ff.NewFlagSet("homeworld")
 	dataPath := fs.StringLong("data-path", "", "directory containing game.json and cluster.json")
 	planet := fs.IntLong("planet", 0, "planet ID to use as homeworld (0 = auto-select)")
@@ -61,7 +61,7 @@ func CmdCreateHomeWorld(svc *app.GameConfigService) *ff.Command {
 }
 
 // CmdAddEmpire returns an ff.Command that adds an empire to game.json and auth.json.
-func CmdAddEmpire(svc *app.GameConfigService) *ff.Command {
+func CmdAddEmpire(svc *app.GameService) *ff.Command {
 	fs := ff.NewFlagSet("empire")
 	dataPath := fs.StringLong("data-path", "", "directory containing game.json and auth.json")
 	empireNo := fs.IntLong("empire", 0, "empire number (0 = auto-assign)")
@@ -77,18 +77,18 @@ func CmdAddEmpire(svc *app.GameConfigService) *ff.Command {
 			if *dataPath == "" {
 				return fmt.Errorf("--data-path is required (or set EC_DATA_PATH)")
 			}
-			n, uuid, err := svc.AddEmpire(*dataPath, *empireNo, *name, domain.PlanetID(*homeworld))
+			n, scrubbedName, uuid, err := svc.AddEmpire(*dataPath, *empireNo, *name, domain.PlanetID(*homeworld))
 			if err != nil {
 				return err
 			}
-			fmt.Printf("added empire %d (%s), magic link: %s\n", n, *name, uuid)
+			fmt.Printf("added empire %d (%s), magic link: %s\n", n, scrubbedName, uuid)
 			return nil
 		},
 	}
 }
 
 // CmdRemoveEmpire returns an ff.Command that deactivates an empire.
-func CmdRemoveEmpire(svc *app.GameConfigService) *ff.Command {
+func CmdRemoveEmpire(svc *app.GameService) *ff.Command {
 	fs := ff.NewFlagSet("empire")
 	dataPath := fs.StringLong("data-path", "", "directory containing game.json and auth.json")
 	empireNo := fs.IntLong("empire", 0, "empire number")
@@ -115,7 +115,7 @@ func CmdRemoveEmpire(svc *app.GameConfigService) *ff.Command {
 }
 
 // CmdShowMagicLink returns an ff.Command that prints the magic link URL for an empire.
-func CmdShowMagicLink(svc *app.GameConfigService) *ff.Command {
+func CmdShowMagicLink(svc *app.GameService) *ff.Command {
 	fs := ff.NewFlagSet("magic-link")
 	dataPath := fs.StringLong("data-path", "", "directory containing auth.json")
 	baseURL := fs.StringLong("base-url", "", "application base URL")

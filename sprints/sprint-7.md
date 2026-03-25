@@ -860,3 +860,104 @@ smells, and consistency issues. The canonical SOUSA reference is
 | 10   | Update `create empire` CLI with new flags              | DONE   | 9          |              |       |
 | 11   | Audit for code smells and SOUSA compliance             | DONE   | 1–10       |              |       |
 | 12   | Verify build, clean up, full test suite                | DONE   | 11         |              |       |
+
+---
+
+## Post-Sprint Code Review
+
+**Reviewed commits:** `1d3529f..8d63b93` (Sprint 7 implementation)
+**Reviewer:** Amp automated review
+**Date:** 2026-03-25
+
+### SOUSA Compliance
+
+| Check | Result |
+|---|---|
+| `domain` imports no outer layers | ✅ Pass |
+| `app` imports no `infra`, `delivery`, `runtime`, or frameworks | ✅ Pass |
+| `delivery` imports no `infra` | ✅ Pass |
+| No game logic in `delivery/cli` (all in `app`/`domain`) | ✅ Pass |
+| `runtime` is the only layer that wires concrete types | ✅ Pass |
+| `go vet ./...` passes | ✅ Pass |
+| `go build ./...` passes | ✅ Pass |
+| `go test ./...` passes | ✅ Pass |
+
+### Findings
+
+#### Finding 1: `ClusterWriter` interface is redundant (low severity — code smell)
+
+`ClusterWriter` (lines 7–10 of `app/cluster_ports.go`) is now a strict subset
+of `ClusterStore`. `ClusterService` still references `ClusterWriter` for its
+`Writer` field while `GameConfigService` uses `ClusterStore`. Both are satisfied
+by the same `filestore.Store`. Consider removing `ClusterWriter` and having
+`ClusterService.Writer` use `ClusterStore` to reduce interface surface. Not a
+SOUSA violation, but it fragments the port definitions unnecessarily.
+
+**File:** `backend/internal/app/cluster_ports.go`
+
+#### Finding 2: `homePlanet` variable used only as nil-check (low severity — code smell)
+
+In `AddEmpire` (lines 112–120 of `game_config_service.go`), `homePlanet` is a
+`*domain.Planet` pointer that is assigned but never dereferenced — it is only
+checked for `nil`. A simpler `found` boolean would suffice and avoid taking a
+pointer into slice memory. Alternatively the lookup could be unified with the
+`findSystemForPlanet` call on line 124 to eliminate the duplicate planet walk.
+
+**File:** `backend/internal/app/game_config_service.go`, lines 111–121
+
+#### Finding 3: CLI prints raw name, not scrubbed name (low severity — bug)
+
+`CmdAddEmpire` (line 84 of `delivery/cli/game_config.go`) prints `*name` (the
+raw flag value) in the success message. It should print the scrubbed name
+returned by the service. Since `AddEmpire` does not currently return the
+scrubbed name, either the return signature should be extended or the CLI should
+accept that the stored name may differ from what it prints.
+
+**File:** `backend/internal/delivery/cli/game_config.go`, line 84
+
+#### Finding 4: Missing domain-layer unit tests for `Coords.Distance` (low severity — test gap)
+
+Task 4 acceptance criteria required `TestCoordsDistance` in
+`backend/internal/domain/cluster_test.go`. This file does not exist — the
+`domain` package has zero test files. `Coords.Distance` is only exercised
+indirectly through `app` layer tests.
+
+**File:** missing `backend/internal/domain/cluster_test.go`
+
+#### Finding 5: `game_config.go` filename is stale (low severity — naming)
+
+`domain/game_config.go` no longer contains `GameConfig` — it only holds
+`AuthConfig` and `AuthLink`. The filename is misleading. Consider renaming to
+`auth.go` or `auth_config.go`. Similarly, `app/game_config_ports.go`,
+`app/game_config_service.go`, and `infra/filestore/game_config.go` still carry
+the `game_config` prefix even though they now operate on `domain.Game`, not
+`domain.GameConfig`. Not a correctness issue, but confusing for new readers.
+
+**Files:** `backend/internal/domain/game_config.go`,
+`backend/internal/app/game_config_ports.go`,
+`backend/internal/app/game_config_service.go`,
+`backend/internal/infra/filestore/game_config.go`
+
+#### Finding 6: `GameConfigStore` interface name is stale (low severity — naming)
+
+The interface is named `GameConfigStore` but now operates on `domain.Game`, not
+`domain.GameConfig`. A rename to `GameStore` would better match its methods
+(`GameExists`, `ReadGame`, `WriteGame`). Same applies to `GameConfigService`.
+
+**Files:** `backend/internal/app/game_config_ports.go`,
+`backend/internal/app/game_config_service.go`
+
+#### Finding 7: End-to-end smoke test not verified (medium severity — acceptance gap)
+
+Task 12 acceptance criterion "End-to-end smoke test runs without errors" is
+still unchecked (`[ ]`). All other criteria are checked. The CLI sequence was
+not validated against a real temp directory during the sprint.
+
+**File:** `sprints/sprint-7.md`, Task 12
+
+### Summary
+
+No SOUSA layering violations were introduced. Build, test, and vet all pass.
+Seven findings identified — all low-to-medium severity, no blockers. The
+highest-priority items for follow-up are Finding 3 (CLI prints unscrubbed name)
+and Finding 7 (missing end-to-end smoke test).

@@ -10,35 +10,35 @@ import (
 	"github.com/mdhender/ec/internal/domain"
 )
 
-// mockGameConfigStore is an in-memory GameConfigStore for testing.
-type mockGameConfigStore struct {
+// mockGameStore is an in-memory GameStore for testing.
+type mockGameStore struct {
 	games         map[string]domain.Game
 	authConfigs   map[string]domain.AuthConfig
 	forceWriteErr error
 }
 
-func newMockStore() *mockGameConfigStore {
-	return &mockGameConfigStore{
+func newMockStore() *mockGameStore {
+	return &mockGameStore{
 		games:       map[string]domain.Game{},
 		authConfigs: map[string]domain.AuthConfig{},
 	}
 }
 
-func (m *mockGameConfigStore) ValidateDir(path string) error {
+func (m *mockGameStore) ValidateDir(path string) error {
 	return nil
 }
 
-func (m *mockGameConfigStore) GameExists(dirPath string) (bool, error) {
+func (m *mockGameStore) GameExists(dirPath string) (bool, error) {
 	_, ok := m.games[dirPath]
 	return ok, nil
 }
 
-func (m *mockGameConfigStore) AuthConfigExists(dirPath string) (bool, error) {
+func (m *mockGameStore) AuthConfigExists(dirPath string) (bool, error) {
 	_, ok := m.authConfigs[dirPath]
 	return ok, nil
 }
 
-func (m *mockGameConfigStore) ReadGame(path string) (domain.Game, error) {
+func (m *mockGameStore) ReadGame(path string) (domain.Game, error) {
 	game, ok := m.games[path]
 	if !ok {
 		return domain.Game{}, errors.New("game.json not found")
@@ -46,7 +46,7 @@ func (m *mockGameConfigStore) ReadGame(path string) (domain.Game, error) {
 	return game, nil
 }
 
-func (m *mockGameConfigStore) WriteGame(path string, game domain.Game) error {
+func (m *mockGameStore) WriteGame(path string, game domain.Game) error {
 	if m.forceWriteErr != nil {
 		return m.forceWriteErr
 	}
@@ -54,7 +54,7 @@ func (m *mockGameConfigStore) WriteGame(path string, game domain.Game) error {
 	return nil
 }
 
-func (m *mockGameConfigStore) ReadAuthConfig(path string) (domain.AuthConfig, error) {
+func (m *mockGameStore) ReadAuthConfig(path string) (domain.AuthConfig, error) {
 	cfg, ok := m.authConfigs[path]
 	if !ok {
 		return domain.AuthConfig{}, errors.New("auth.json not found")
@@ -62,7 +62,7 @@ func (m *mockGameConfigStore) ReadAuthConfig(path string) (domain.AuthConfig, er
 	return cfg, nil
 }
 
-func (m *mockGameConfigStore) WriteAuthConfig(path string, cfg domain.AuthConfig) error {
+func (m *mockGameStore) WriteAuthConfig(path string, cfg domain.AuthConfig) error {
 	if m.forceWriteErr != nil {
 		return m.forceWriteErr
 	}
@@ -70,7 +70,7 @@ func (m *mockGameConfigStore) WriteAuthConfig(path string, cfg domain.AuthConfig
 	return nil
 }
 
-func (m *mockGameConfigStore) CreateEmpireDir(dirPath string, empireNo int) error {
+func (m *mockGameStore) CreateEmpireDir(dirPath string, empireNo int) error {
 	return nil
 }
 
@@ -108,7 +108,7 @@ func TestCreateGame(t *testing.T) {
 	t.Run("writes empty game and auth configs", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 		dir := "/test/dir"
 
 		if err := svc.CreateGame(dir); err != nil {
@@ -136,7 +136,7 @@ func TestCreateGame(t *testing.T) {
 		store := newMockStore()
 		store.games["/test/dir"] = domain.Game{}
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 
 		if err := svc.CreateGame("/test/dir"); err == nil {
 			t.Fatal("expected error when game.json exists, got nil")
@@ -147,7 +147,7 @@ func TestCreateGame(t *testing.T) {
 		store := newMockStore()
 		store.authConfigs["/test/dir"] = domain.AuthConfig{}
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 
 		if err := svc.CreateGame("/test/dir"); err == nil {
 			t.Fatal("expected error when auth.json exists, got nil")
@@ -179,7 +179,7 @@ func TestAddEmpire(t *testing.T) {
 	t.Run("auto-assigns 1 for empty list", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 		store.games[dir] = domain.Game{
 			ActiveHomeWorldID: hwPlanetID,
 			Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
@@ -188,7 +188,7 @@ func TestAddEmpire(t *testing.T) {
 		store.authConfigs[dir] = domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}}
 		clusterStore.clusters[dir] = makeTestCluster(hwPlanetID)
 
-		n, uuid, err := svc.AddEmpire(dir, 0, "TestEmpire", 0)
+		n, _, uuid, err := svc.AddEmpire(dir, 0, "TestEmpire", 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -203,7 +203,7 @@ func TestAddEmpire(t *testing.T) {
 	t.Run("auto-assigns max+1 for non-empty list", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 		store.games[dir] = domain.Game{
 			ActiveHomeWorldID: hwPlanetID,
 			Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID, Empires: []domain.EmpireID{3, 7}}},
@@ -215,7 +215,7 @@ func TestAddEmpire(t *testing.T) {
 		store.authConfigs[dir] = domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}}
 		clusterStore.clusters[dir] = makeTestCluster(hwPlanetID)
 
-		n, _, err := svc.AddEmpire(dir, 0, "TestEmpire", 0)
+		n, _, _, err := svc.AddEmpire(dir, 0, "TestEmpire", 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -227,7 +227,7 @@ func TestAddEmpire(t *testing.T) {
 	t.Run("fails on duplicate empire", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 		store.games[dir] = domain.Game{
 			ActiveHomeWorldID: hwPlanetID,
 			Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID, Empires: []domain.EmpireID{5}}},
@@ -236,7 +236,7 @@ func TestAddEmpire(t *testing.T) {
 		store.authConfigs[dir] = domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}}
 		clusterStore.clusters[dir] = makeTestCluster(hwPlanetID)
 
-		if _, _, err := svc.AddEmpire(dir, 5, "TestEmpire", 0); err == nil {
+		if _, _, _, err := svc.AddEmpire(dir, 5, "TestEmpire", 0); err == nil {
 			t.Fatal("expected error for duplicate empire, got nil")
 		}
 	})
@@ -244,7 +244,7 @@ func TestAddEmpire(t *testing.T) {
 	t.Run("generates magic link UUID", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 		store.games[dir] = domain.Game{
 			ActiveHomeWorldID: hwPlanetID,
 			Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
@@ -253,7 +253,7 @@ func TestAddEmpire(t *testing.T) {
 		store.authConfigs[dir] = domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}}
 		clusterStore.clusters[dir] = makeTestCluster(hwPlanetID)
 
-		_, uuid, err := svc.AddEmpire(dir, 42, "TestEmpire", 0)
+		_, _, uuid, err := svc.AddEmpire(dir, 42, "TestEmpire", 0)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -277,7 +277,7 @@ func TestAddEmpire_RequiresHomeWorld(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 	store.games[dir] = domain.Game{
 		Empires: []domain.Empire{},
 		Races:   []domain.Race{},
@@ -285,7 +285,7 @@ func TestAddEmpire_RequiresHomeWorld(t *testing.T) {
 	store.authConfigs[dir] = domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}}
 	clusterStore.clusters[dir] = domain.Cluster{}
 
-	if _, _, err := svc.AddEmpire(dir, 0, "TestEmpire", 0); err == nil {
+	if _, _, _, err := svc.AddEmpire(dir, 0, "TestEmpire", 0); err == nil {
 		t.Fatal("expected error when no active homeworld, got nil")
 	}
 }
@@ -295,7 +295,7 @@ func TestAddEmpire_HomeWorldOverride(t *testing.T) {
 	const hwPlanetID domain.PlanetID = 200
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 	store.games[dir] = domain.Game{
 		ActiveHomeWorldID: 999, // different active homeworld
 		Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
@@ -304,7 +304,7 @@ func TestAddEmpire_HomeWorldOverride(t *testing.T) {
 	store.authConfigs[dir] = domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}}
 	clusterStore.clusters[dir] = makeTestCluster(hwPlanetID)
 
-	n, _, err := svc.AddEmpire(dir, 0, "TestEmpire", hwPlanetID)
+	n, _, _, err := svc.AddEmpire(dir, 0, "TestEmpire", hwPlanetID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -322,7 +322,7 @@ func TestAddEmpire_HomeWorldNotFound(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 	store.games[dir] = domain.Game{
 		Races:   []domain.Race{},
 		Empires: []domain.Empire{},
@@ -331,7 +331,7 @@ func TestAddEmpire_HomeWorldNotFound(t *testing.T) {
 	clusterStore.clusters[dir] = domain.Cluster{}
 
 	// Pass a homeWorldID that doesn't exist in game.Races
-	if _, _, err := svc.AddEmpire(dir, 0, "TestEmpire", 999); err == nil {
+	if _, _, _, err := svc.AddEmpire(dir, 0, "TestEmpire", 999); err == nil {
 		t.Fatal("expected error when homeworld not in game.Races, got nil")
 	}
 }
@@ -341,7 +341,7 @@ func TestAddEmpire_HomeWorldFull(t *testing.T) {
 	const hwPlanetID domain.PlanetID = 300
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 
 	// Create a race with 25 empires
 	empireIDs := make([]domain.EmpireID, 25)
@@ -358,7 +358,7 @@ func TestAddEmpire_HomeWorldFull(t *testing.T) {
 	store.authConfigs[dir] = domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}}
 	clusterStore.clusters[dir] = makeTestCluster(hwPlanetID)
 
-	if _, _, err := svc.AddEmpire(dir, 0, "TestEmpire", 0); err == nil {
+	if _, _, _, err := svc.AddEmpire(dir, 0, "TestEmpire", 0); err == nil {
 		t.Fatal("expected error when homeworld is full (25 empires), got nil")
 	}
 }
@@ -393,7 +393,7 @@ func TestScrubEmpireName(t *testing.T) {
 			const hwPlanetID domain.PlanetID = 400
 			store := newMockStore()
 			clusterStore := newMockClusterStore()
-			svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+			svc := &app.GameService{Store: store, Cluster: clusterStore}
 			store.games[dir] = domain.Game{
 				ActiveHomeWorldID: hwPlanetID,
 				Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
@@ -402,7 +402,7 @@ func TestScrubEmpireName(t *testing.T) {
 			store.authConfigs[dir] = domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}}
 			clusterStore.clusters[dir] = makeTestCluster(hwPlanetID)
 
-			n, _, err := svc.AddEmpire(dir, 0, tt.input, 0)
+			n, _, _, err := svc.AddEmpire(dir, 0, tt.input, 0)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -426,7 +426,7 @@ func TestScrubEmpireName(t *testing.T) {
 		const hwPlanetID domain.PlanetID = 400
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 		store.games[dir] = domain.Game{
 			ActiveHomeWorldID: hwPlanetID,
 			Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
@@ -435,7 +435,7 @@ func TestScrubEmpireName(t *testing.T) {
 		store.authConfigs[dir] = domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}}
 		clusterStore.clusters[dir] = makeTestCluster(hwPlanetID)
 
-		if _, _, err := svc.AddEmpire(dir, 0, "!@#$", 0); err == nil {
+		if _, _, _, err := svc.AddEmpire(dir, 0, "!@#$", 0); err == nil {
 			t.Fatal("expected error for empty scrubbed name, got nil")
 		}
 	})
@@ -447,7 +447,7 @@ func TestRemoveEmpire(t *testing.T) {
 	t.Run("sets active to false", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 		dir := "/test/dir"
 		store.games[dir] = domain.Game{
 			Empires: []domain.Empire{
@@ -470,7 +470,7 @@ func TestRemoveEmpire(t *testing.T) {
 	t.Run("removes magic link", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 		dir := "/test/dir"
 		store.games[dir] = domain.Game{
 			Empires: []domain.Empire{
@@ -493,7 +493,7 @@ func TestRemoveEmpire(t *testing.T) {
 	t.Run("no error when magic link missing", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 		dir := "/test/dir"
 		store.games[dir] = domain.Game{
 			Empires: []domain.Empire{
@@ -510,7 +510,7 @@ func TestRemoveEmpire(t *testing.T) {
 	t.Run("fails when empire not found", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore}
 		dir := "/test/dir"
 		store.games[dir] = domain.Game{Empires: []domain.Empire{}}
 		store.authConfigs[dir] = domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}}
@@ -548,7 +548,7 @@ func TestCreateHomeWorld_AutoSelect(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 	store.games[dir] = domain.Game{}
 	clusterStore.clusters[dir] = makeRichCluster()
 
@@ -572,7 +572,7 @@ func TestCreateHomeWorld_PlanetFlag(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 	store.games[dir] = domain.Game{}
 	clusterStore.clusters[dir] = makeRichCluster()
 
@@ -590,7 +590,7 @@ func TestCreateHomeWorld_PlanetFlagSkipsDistance(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 	// Planet 3 is at system 3 (distance 1 from system 1), which would fail minDistance=3
 	store.games[dir] = domain.Game{
 		Races: []domain.Race{{ID: 1, HomeWorld: 1}},
@@ -611,7 +611,7 @@ func TestCreateHomeWorld_PlanetNotFound(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 	store.games[dir] = domain.Game{}
 	clusterStore.clusters[dir] = makeRichCluster()
 
@@ -624,7 +624,7 @@ func TestCreateHomeWorld_NotTerrestrial(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 	store.games[dir] = domain.Game{}
 	c := makeRichCluster()
 	c.Planets[0].Kind = domain.GasGiant // planet ID 1 is now a gas giant
@@ -639,7 +639,7 @@ func TestCreateHomeWorld_AlreadyHomeWorld(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 	store.games[dir] = domain.Game{
 		Races: []domain.Race{{ID: 1, HomeWorld: 1}},
 	}
@@ -659,7 +659,7 @@ func TestCreateHomeWorld_MinDistance(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 	store.games[dir] = domain.Game{
 		Races: []domain.Race{{ID: 1, HomeWorld: 1}},
 	}
@@ -681,7 +681,7 @@ func TestCreateHomeWorld_NoTerrestrials(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameConfigService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore}
 	store.games[dir] = domain.Game{}
 	c := makeRichCluster()
 	// Make all planets non-terrestrial

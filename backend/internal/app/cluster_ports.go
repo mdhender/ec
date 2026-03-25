@@ -4,11 +4,6 @@ package app
 
 import "github.com/mdhender/ec/internal/domain"
 
-// ClusterWriter persists a generated cluster.
-type ClusterWriter interface {
-	WriteCluster(dataPath string, cluster domain.Cluster, overwrite bool) error
-}
-
 // ClusterStore reads and writes cluster files.
 type ClusterStore interface {
 	ReadCluster(dataPath string) (domain.Cluster, error)

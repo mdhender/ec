@@ -13,7 +13,7 @@ import (
 
 // ClusterService orchestrates cluster generation use cases.
 type ClusterService struct {
-	Writer ClusterWriter
+	Writer ClusterStore
 }
 
 // CreateCluster generates one cluster and writes it to disk.

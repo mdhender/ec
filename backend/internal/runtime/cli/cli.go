@@ -18,7 +18,7 @@ func BuildCommands() []*ff.Command {
 		Writer: store,
 	}
 
-	gameConfigSvc := &app.GameConfigService{
+	gameSvc := &app.GameService{
 		Store:   store,
 		Cluster: store,
 	}
@@ -29,9 +29,9 @@ func BuildCommands() []*ff.Command {
 		ShortHelp: "create game objects",
 		Subcommands: []*ff.Command{
 			deliverycli.CmdCreateCluster(clusterSvc),
-			deliverycli.CmdCreateGame(gameConfigSvc),
-			deliverycli.CmdCreateHomeWorld(gameConfigSvc),
-			deliverycli.CmdAddEmpire(gameConfigSvc),
+			deliverycli.CmdCreateGame(gameSvc),
+			deliverycli.CmdCreateHomeWorld(gameSvc),
+			deliverycli.CmdAddEmpire(gameSvc),
 		},
 	}
 
@@ -40,7 +40,7 @@ func BuildCommands() []*ff.Command {
 		Usage:     "cli remove SUBCOMMAND ...",
 		ShortHelp: "remove game objects",
 		Subcommands: []*ff.Command{
-			deliverycli.CmdRemoveEmpire(gameConfigSvc),
+			deliverycli.CmdRemoveEmpire(gameSvc),
 		},
 	}
 
@@ -49,7 +49,7 @@ func BuildCommands() []*ff.Command {
 		Usage:     "cli show SUBCOMMAND ...",
 		ShortHelp: "show things",
 		Subcommands: []*ff.Command{
-			deliverycli.CmdShowMagicLink(gameConfigSvc),
+			deliverycli.CmdShowMagicLink(gameSvc),
 		},
 	}
 
