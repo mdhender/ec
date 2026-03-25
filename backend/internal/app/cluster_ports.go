@@ -11,7 +11,7 @@ type ClusterReader interface {
 
 // ClusterWriter persists a generated cluster.
 type ClusterWriter interface {
-	WriteCluster(path string, cluster domain.Cluster) error
+	WriteCluster(path string, cluster domain.Cluster, overwrite bool) error
 }
 
 // GameWriter persists a game file.

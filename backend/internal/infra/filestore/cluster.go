@@ -25,14 +25,22 @@ func (s *Store) ReadCluster(path string) (domain.Cluster, error) {
 }
 
 // WriteCluster writes a domain.Cluster as a JSON file.
-func (s *Store) WriteCluster(path string, cluster domain.Cluster) error {
+// If overwrite is false and the file already exists, an error is returned.
+func (s *Store) WriteCluster(path string, cluster domain.Cluster, overwrite bool) error {
+	dir := filepath.Dir(path)
+	if sb, err := os.Stat(dir); err != nil {
+		return fmt.Errorf("invalid directory: %w", err)
+	} else if !sb.IsDir() {
+		return fmt.Errorf("invalid directory: %s", dir)
+	}
+	if !overwrite {
+		if _, err := os.Stat(path); err == nil {
+			return fmt.Errorf("save file exists: %q (use --overwrite to replace)", path)
+		}
+	}
 	data, err := json.MarshalIndent(cluster, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshaling cluster: %w", err)
-	}
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("creating directory: %w", err)
 	}
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("writing cluster file: %w", err)
@@ -43,6 +51,12 @@ func (s *Store) WriteCluster(path string, cluster domain.Cluster) error {
 // WriteGame writes a Game as a JSON file.
 // If overwrite is false and the file already exists, an error is returned.
 func (s *Store) WriteGame(path string, game *domain.Game, overwrite bool) error {
+	dir := filepath.Dir(path)
+	if sb, err := os.Stat(dir); err != nil {
+		return fmt.Errorf("invalid directory: %w", err)
+	} else if !sb.IsDir() {
+		return fmt.Errorf("invalid directory: %s", dir)
+	}
 	if !overwrite {
 		if _, err := os.Stat(path); err == nil {
 			return fmt.Errorf("save file exists: %q (use --overwrite to replace)", path)
@@ -52,11 +66,7 @@ func (s *Store) WriteGame(path string, game *domain.Game, overwrite bool) error 
 	if err != nil {
 		return fmt.Errorf("marshaling game: %w", err)
 	}
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("creating directory: %w", err)
-	}
-	if err := os.WriteFile(path, data, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(path, "game.json"), data, 0o644); err != nil {
 		return fmt.Errorf("writing game file: %w", err)
 	}
 	return nil

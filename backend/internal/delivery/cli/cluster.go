@@ -14,12 +14,13 @@ import (
 func CmdCreateCluster(svc *app.ClusterService) *cobra.Command {
 	var path string
 	var seed1, seed2 uint64 = 10, 10
+	overwrite := false
 
 	cmd := &cobra.Command{
 		Use:   "cluster",
 		Short: "create a new cluster",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cluster, err := svc.CreateCluster(seed1, seed2, path)
+			cluster, err := svc.CreateCluster(seed1, seed2, path, overwrite)
 			if err != nil {
 				return err
 			}
@@ -31,6 +32,7 @@ func CmdCreateCluster(svc *app.ClusterService) *cobra.Command {
 	cmd.Flags().StringVar(&path, "path", "testdata/cluster.json", "path to save cluster JSON")
 	cmd.Flags().Uint64Var(&seed1, "seed1", seed1, "seed1")
 	cmd.Flags().Uint64Var(&seed2, "seed2", seed2, "seed2")
+	cmd.Flags().BoolVar(&overwrite, "overwrite", overwrite, "overwrite file if it exists")
 	return cmd
 }
 

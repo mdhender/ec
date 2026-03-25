@@ -19,13 +19,13 @@ type ClusterService struct {
 }
 
 // CreateCluster generates one cluster and writes it to disk.
-func (s *ClusterService) CreateCluster(seed1, seed2 uint64, outputPath string) (domain.Cluster, error) {
+func (s *ClusterService) CreateCluster(seed1, seed2 uint64, outputPath string, overwrite bool) (domain.Cluster, error) {
 	r := prng.New(rand.NewPCG(seed1, seed2))
 	cluster, err := clustergen.GenerateCluster(r)
 	if err != nil {
 		return domain.Cluster{}, fmt.Errorf("createCluster: %w", err)
 	}
-	if err := s.Writer.WriteCluster(outputPath, cluster); err != nil {
+	if err := s.Writer.WriteCluster(outputPath, cluster, overwrite); err != nil {
 		return domain.Cluster{}, fmt.Errorf("createCluster: %w", err)
 	}
 	return cluster, nil
