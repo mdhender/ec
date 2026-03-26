@@ -213,6 +213,25 @@ func parseIntParam(c *echo.Context, name string) (int, error) {
 	return n, nil
 }
 
+// GetDashboard returns colony, ship, and planet summary counts for the
+// authenticated empire.
+// Requires EmpireAuthMiddleware to have validated ownership.
+func GetDashboard(store app.DashboardStore) func(c *echo.Context) error {
+	return func(c *echo.Context) error {
+		empireNo, _ := EmpireFromCtx(c)
+
+		summary, err := store.GetDashboardSummary(empireNo)
+		if err != nil {
+			if errors.Is(err, cerr.ErrNotFound) {
+				return c.JSON(http.StatusNotFound, map[string]any{"error": "not found"})
+			}
+			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "internal error"})
+		}
+
+		return c.JSON(http.StatusOK, summary)
+	}
+}
+
 // PostShutdown triggers a graceful shutdown using a shared secret key.
 // If key is empty, always returns 501.
 func PostShutdown(key string, shutdownCh chan struct{}) func(c *echo.Context) error {

@@ -97,8 +97,9 @@ func (s *Server) Start() error {
 		empireExtractor,
 		tokenValidator,
 		loginSvc,
-		fileStore,
-		fileStore,
+		fileStore,        // orderStore
+		fileStore,        // reportStore
+		fileStore,        // dashboardStore
 		s.shutdownKey,
 		s.shutdownCh,
 		maxOrderBytes,

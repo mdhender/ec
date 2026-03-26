@@ -17,6 +17,7 @@ func AddRoutes(
 	loginSvc *app.LoginService,
 	orderStore app.OrderStore,
 	reportStore app.ReportStore,
+	dashboardStore app.DashboardStore,
 	shutdownKey string,
 	shutdownCh chan struct{},
 	maxOrderBytes int64,
@@ -37,6 +38,7 @@ func AddRoutes(
 	protected.POST("/api/:empireNo/orders", PostOrders(orderStore, maxOrderBytes))
 	protected.GET("/api/:empireNo/reports", GetReports(reportStore))
 	protected.GET("/api/:empireNo/reports/:turnYear/:turnQuarter", GetReport(reportStore))
+	protected.GET("/api/:empireNo/dashboard", GetDashboard(dashboardStore))
 
 	// Shutdown route (only registered if shutdownKey is set)
 	if shutdownKey != "" {

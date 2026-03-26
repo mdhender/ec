@@ -225,12 +225,12 @@ _Impact scan:_
 - Search commands: N/A
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `DashboardStore` interface exists in `app/dashboard_ports.go`
-- [ ] `DashboardSummary` and `KindCount` types exist with correct JSON tags
-- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
-- [ ] New/changed API matches an existing pattern (or deviation documented)
-- [ ] SOUSA boundary valid for touched layers
+- [x] `cd backend && go build ./...` succeeds
+- [x] `DashboardStore` interface exists in `app/dashboard_ports.go`
+- [x] `DashboardSummary` and `KindCount` types exist with correct JSON tags
+- [x] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [x] New/changed API matches an existing pattern (or deviation documented)
+- [x] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - None — interface and type definitions have no testable logic.
@@ -379,20 +379,20 @@ _Impact scan:_
 - Search commands: `rg 'DashboardStore' backend/internal/`
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes
-- [ ] `filestore.Store` satisfies `app.DashboardStore` (compile-time assertion)
-- [ ] Reads from `s.dataPath/game.json` and `s.dataPath/cluster.json`
-- [ ] Returns `cerr.ErrNotFound` (wrapped) when empire is not in game.json
-- [ ] `colony_kinds` and `planet_kinds` omit zero-count entries
-- [ ] Both kind slices are sorted by `Kind` ascending
-- [ ] Unique-planet deduplication is correct
-- [ ] `ShipCount` is always 0
-- [ ] All five tests pass
-- [ ] At least one negative/guard-path test added or updated (`TestGetDashboardSummary_EmpireNotFound`, `TestGetDashboardSummary_NoColonies`)
-- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
-- [ ] New/changed API matches an existing pattern (or deviation documented)
-- [ ] SOUSA boundary valid for touched layers
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes
+- [x] `filestore.Store` satisfies `app.DashboardStore` (compile-time assertion)
+- [x] Reads from `s.dataPath/game.json` and `s.dataPath/cluster.json`
+- [x] Returns `cerr.ErrNotFound` (wrapped) when empire is not in game.json
+- [x] `colony_kinds` and `planet_kinds` omit zero-count entries
+- [x] Both kind slices are sorted by `Kind` ascending
+- [x] Unique-planet deduplication is correct
+- [x] `ShipCount` is always 0
+- [x] All five tests pass
+- [x] At least one negative/guard-path test added or updated (`TestGetDashboardSummary_EmpireNotFound`, `TestGetDashboardSummary_NoColonies`)
+- [x] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [x] New/changed API matches an existing pattern (or deviation documented)
+- [x] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - `TestGetDashboardSummary_OneColony`
@@ -521,18 +521,18 @@ _Impact scan:_
 - Search commands: `rg 'AddRoutes' backend/internal/`
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes
-- [ ] `GET /api/:empireNo/dashboard` route is registered
-- [ ] `AddRoutes` accepts `dashboardStore app.DashboardStore`
-- [ ] `runtime/server/server.go` passes `fileStore` as `dashboardStore`
-- [ ] `GetDashboard` returns 200 with `DashboardSummary` JSON on success
-- [ ] `GetDashboard` returns 404 when empire not found
-- [ ] `GetDashboard` returns 500 on other errors
-- [ ] Any existing `AddRoutes` call sites (tests) compile after signature change
-- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
-- [ ] New/changed API matches an existing pattern (or deviation documented)
-- [ ] SOUSA boundary valid for touched layers
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes
+- [x] `GET /api/:empireNo/dashboard` route is registered
+- [x] `AddRoutes` accepts `dashboardStore app.DashboardStore`
+- [x] `runtime/server/server.go` passes `fileStore` as `dashboardStore`
+- [x] `GetDashboard` returns 200 with `DashboardSummary` JSON on success
+- [x] `GetDashboard` returns 404 when empire not found
+- [x] `GetDashboard` returns 500 on other errors
+- [x] Any existing `AddRoutes` call sites (tests) compile after signature change
+- [x] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [x] New/changed API matches an existing pattern (or deviation documented)
+- [x] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - Update `delivery/http/handlers_test.go` call sites if `AddRoutes` is
@@ -577,12 +577,12 @@ _Impact scan:_
    ```
 
 **Acceptance criteria:**
-- [ ] No SOUSA import violations
-- [ ] JSON field names match the contract
-- [ ] Zero-count entries never appear in kind slices
-- [ ] `cd backend && go vet ./...` passes
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes
+- [x] No SOUSA import violations
+- [x] JSON field names match the contract
+- [x] Zero-count entries never appear in kind slices
+- [x] `cd backend && go vet ./...` passes
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes
 
 **Tests to add/update:**
 - None — audit task only.
@@ -593,7 +593,7 @@ _Impact scan:_
 
 | Task | Title                                         | Status | Depends On | Agent/Thread | Notes |
 |------|-----------------------------------------------|--------|------------|--------------|-------|
-| 1    | App: DashboardSummary + DashboardStore port   | TODO   | —          |              |       |
-| 2    | Filestore: GetDashboardSummary + tests        | TODO   | 1          |              |       |
-| 3    | Delivery + runtime: handler, route, wiring    | TODO   | 1, 2       |              |       |
-| 4    | Audit, build, and full test suite             | TODO   | 1–3        |              |       |
+| 1    | App: DashboardSummary + DashboardStore port   | DONE   | —          |              |       |
+| 2    | Filestore: GetDashboardSummary + tests        | DONE   | 1          |              |       |
+| 3    | Delivery + runtime: handler, route, wiring    | DONE   | 1, 2       |              |       |
+| 4    | Audit, build, and full test suite             | DONE   | 1–3        |              |       |
