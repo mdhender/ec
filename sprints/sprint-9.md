@@ -660,3 +660,38 @@ _Impact scan:_
 | 2    | AddEmpire: farm group creation             | TODO   | 1          |              |       |
 | 3    | AddEmpire: mining group creation           | TODO   | 2          |              |       |
 | 4    | Audit, build, and full test suite          | TODO   | 1–3        |              |       |
+
+---
+
+## Sprint 9 Review Findings
+
+**Reviewed commit:** `830ef82` (sprint9: seed starting colony from template with farm and mining groups)
+
+**Build health:** `go build ./...` ✅ | `go test ./...` ✅ | `go vet ./...` ✅ | SOUSA import audit ✅
+
+### SOUSA Compliance
+
+No violations found. `app/game_service.go` imports only `domain` and Go stdlib (`crypto/rand`, `fmt`, `math/rand/v2`, `slices`, `strings`, `unicode`). No infra, delivery, runtime, Echo, SQLite, or CLI framework imports.
+
+### Code Smells
+
+1. **(high) Missing planet-in-cluster guard — `game_service.go` L161–169.**
+   The homeworld deposit-ID lookup silently accepts the case where `homeWorldID` exists in `game.Races` but not in `cluster.Planets`. `AddEmpire` would persist a colony whose `Planet` field points at a nonexistent planet, with `MiningGroups = nil` instead of failing fast. A guard should return an error if the planet loop finds no match.
+
+2. **(medium) No colony template content validation — `game_service.go` L62–139.**
+   `CreateHomeWorld` validates the homeworld template (habitability range, non-empty deposits, resource/yield/quantity bounds). `AddEmpire` does not validate `ColonyTemplate` at all — an invalid `Kind` (zero value), zero/negative `TechLevel`, or negative `QuantityAssembled` would be persisted silently. Validation should be added at the app layer to match the existing `CreateHomeWorld` pattern.
+
+3. **(medium) Duplicate same-TL GroupUnit entries — `game_service.go` L141–158 and L494–560.**
+   Both the farm-group builder and `buildMiningGroups` create one `GroupUnit` per matching inventory row. If the colony template contains multiple `Farm` (or `Mine`) inventory entries at the same `TechLevel`, the resulting group will have duplicate same-TL sub-groups instead of one merged entry per tech level. The domain comments describe sub-groups as "by tech level," implying uniqueness. Aggregate by TechLevel before building groups.
+
+4. **(medium) Template read before cheap validation — `game_service.go` L53–65.**
+   `ReadColonyTemplate` (a file I/O call) runs before homeworld resolution, race lookup, empire-limit check, and name scrubbing. If any of those cheap checks fail, the template read was wasted. Move it after the guard clauses, or at minimum after the race/empire checks.
+
+5. **(medium) Missing test coverage — `game_service_test.go`.**
+   No test asserts `colony.FactoryGroups == nil` after `AddEmpire`. No test covers `AddEmpire` with a colony-template read failure (only `CreateHomeWorld` has `TestCreateHomeWorld_TemplateError`). No test covers duplicate same-TL inventory rows. No test covers the case where the homeworld planet exists in `game.Races` but not in `cluster.Planets`.
+
+6. **(low) TechLevel sort comparator uses int subtraction — `game_service.go` L152–154, L508–510.**
+   `int(a.TechLevel) - int(b.TechLevel)` is duplicated in both the farm and mine sort calls. This is the brittle subtraction comparator pattern; while safe for realistic TechLevel values, it could overflow for extreme values and should use ordered comparison. Consider a shared helper.
+
+7. **(low) Test fixture slice aliasing — `game_service_test.go` L174–196.**
+   `makeTestClusterWithDeposits` stores the caller's `depositIDs` slice directly on the planet. Mutations to the caller's slice after fixture creation could corrupt the fixture. Copy the slice before assignment.

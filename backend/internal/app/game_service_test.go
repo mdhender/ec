@@ -181,6 +181,8 @@ func makeTestClusterWithDeposits(planetID domain.PlanetID, depositIDs []domain.D
 			QuantityRemaining: 1000,
 		}
 	}
+	dids := make([]domain.DepositID, len(depositIDs))
+	copy(dids, depositIDs)
 	return domain.Cluster{
 		Systems: []domain.System{
 			{ID: 1, Location: domain.Coords{X: 10, Y: 10, Z: 10}},
@@ -189,7 +191,7 @@ func makeTestClusterWithDeposits(planetID domain.PlanetID, depositIDs []domain.D
 			{ID: 1, System: 1, Orbits: [10]domain.PlanetID{planetID}},
 		},
 		Planets: []domain.Planet{
-			{ID: planetID, Kind: domain.Terrestrial, Habitability: 25, Deposits: depositIDs},
+			{ID: planetID, Kind: domain.Terrestrial, Habitability: 25, Deposits: dids},
 		},
 		Deposits: deposits,
 	}
@@ -1201,5 +1203,90 @@ func TestAddEmpire_MiningGroups_NoDeposits(t *testing.T) {
 	c := got.Colonies[0]
 	if c.MiningGroups != nil {
 		t.Errorf("expected nil MiningGroups, got %v", c.MiningGroups)
+	}
+}
+
+func TestAddEmpire_FactoryGroupsNil(t *testing.T) {
+	const hwPlanetID = domain.PlanetID(100)
+	store := newMockStore()
+	_ = store.WriteGame(".", domain.Game{})
+	_ = store.WriteAuthConfig(".", domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}})
+
+	clusterStore := newMockClusterStore()
+	_ = clusterStore.WriteCluster(".", makeTestCluster(hwPlanetID), true)
+
+	svc := &app.GameService{
+		Store:     store,
+		Cluster:   clusterStore,
+		Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()},
+	}
+
+	game, _ := store.ReadGame(".")
+	game.Races = append(game.Races, domain.Race{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID})
+	game.ActiveHomeWorldID = hwPlanetID
+	_ = store.WriteGame(".", game)
+
+	_, _, _, err := svc.AddEmpire(".", 0, "Test Empire", hwPlanetID)
+	if err != nil {
+		t.Fatalf("AddEmpire error: %v", err)
+	}
+
+	got, _ := clusterStore.ReadCluster(".")
+	c := got.Colonies[0]
+	if c.FactoryGroups != nil {
+		t.Errorf("expected nil FactoryGroups, got %v", c.FactoryGroups)
+	}
+}
+
+func TestAddEmpire_TemplateReadError(t *testing.T) {
+	const hwPlanetID = domain.PlanetID(100)
+	store := newMockStore()
+	_ = store.WriteGame(".", domain.Game{
+		ActiveHomeWorldID: hwPlanetID,
+		Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
+		Empires:           []domain.Empire{},
+	})
+	_ = store.WriteAuthConfig(".", domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}})
+
+	clusterStore := newMockClusterStore()
+	_ = clusterStore.WriteCluster(".", makeTestCluster(hwPlanetID), true)
+
+	svc := &app.GameService{
+		Store:     store,
+		Cluster:   clusterStore,
+		Templates: &mockTemplateStore{forceErr: errors.New("template read failure")},
+	}
+
+	if _, _, _, err := svc.AddEmpire(".", 0, "Test Empire", hwPlanetID); err == nil {
+		t.Fatal("expected error when colony template read fails, got nil")
+	}
+}
+
+func TestAddEmpire_PlanetNotInCluster(t *testing.T) {
+	const hwPlanetID = domain.PlanetID(100)
+	store := newMockStore()
+	_ = store.WriteGame(".", domain.Game{
+		ActiveHomeWorldID: hwPlanetID,
+		Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
+		Empires:           []domain.Empire{},
+	})
+	_ = store.WriteAuthConfig(".", domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}})
+
+	// Cluster has no planet matching hwPlanetID
+	clusterStore := newMockClusterStore()
+	_ = clusterStore.WriteCluster(".", domain.Cluster{
+		Systems: []domain.System{{ID: 1, Location: domain.Coords{X: 10, Y: 10, Z: 10}}},
+		Stars:   []domain.Star{{ID: 1, System: 1, Orbits: [10]domain.PlanetID{999}}},
+		Planets: []domain.Planet{{ID: 999, Kind: domain.Terrestrial, Habitability: 25}},
+	}, true)
+
+	svc := &app.GameService{
+		Store:     store,
+		Cluster:   clusterStore,
+		Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()},
+	}
+
+	if _, _, _, err := svc.AddEmpire(".", 0, "Test Empire", hwPlanetID); err == nil {
+		t.Fatal("expected error when homeworld planet not in cluster, got nil")
 	}
 }

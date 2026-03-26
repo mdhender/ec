@@ -3,6 +3,7 @@
 package app
 
 import (
+	"cmp"
 	cryptorand "crypto/rand"
 	"fmt"
 	mathrand "math/rand/v2"
@@ -56,10 +57,6 @@ func (s *GameService) AddEmpire(dirPath string, empireNo int, name string, homeW
 		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
 	cluster, err := s.Cluster.ReadCluster(dirPath)
-	if err != nil {
-		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
-	}
-	colonyTmpl, err := s.Templates.ReadColonyTemplate(dirPath)
 	if err != nil {
 		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
@@ -117,6 +114,23 @@ func (s *GameService) AddEmpire(dirPath string, empireNo int, name string, homeW
 		}
 	}
 
+	// Read and validate colony template
+	colonyTmpl, err := s.Templates.ReadColonyTemplate(dirPath)
+	if err != nil {
+		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
+	}
+	if colonyTmpl.Kind < domain.OpenAir || colonyTmpl.Kind > domain.Enclosed {
+		return 0, "", "", fmt.Errorf("addEmpire: invalid colony template kind %d", colonyTmpl.Kind)
+	}
+	if colonyTmpl.TechLevel <= 0 {
+		return 0, "", "", fmt.Errorf("addEmpire: invalid colony template tech level %d (must be > 0)", colonyTmpl.TechLevel)
+	}
+	for i, inv := range colonyTmpl.Inventory {
+		if inv.QuantityAssembled < 0 {
+			return 0, "", "", fmt.Errorf("addEmpire: colony template inventory %d has negative assembled quantity", i)
+		}
+	}
+
 	// Create starting colony (use max existing ID + 1 to avoid duplicates if colonies are ever deleted)
 	maxColonyID := 0
 	for _, c := range cluster.Colonies {
@@ -140,17 +154,19 @@ func (s *GameService) AddEmpire(dirPath string, empireNo int, name string, homeW
 
 	// Build farm group from assembled Farm units in the colony inventory.
 	// Each colony has at most one FarmGroup; sub-groups are by tech level.
-	var farmUnits []domain.GroupUnit
+	// Aggregate by TechLevel in case multiple inventory rows share a TL.
+	farmByTL := make(map[domain.TechLevel]int)
 	for _, inv := range colony.Inventory {
 		if inv.Unit == domain.Farm && inv.QuantityAssembled > 0 {
-			farmUnits = append(farmUnits, domain.GroupUnit{
-				TechLevel: inv.TechLevel,
-				Quantity:  inv.QuantityAssembled,
-			})
+			farmByTL[inv.TechLevel] += inv.QuantityAssembled
 		}
 	}
+	var farmUnits []domain.GroupUnit
+	for tl, qty := range farmByTL {
+		farmUnits = append(farmUnits, domain.GroupUnit{TechLevel: tl, Quantity: qty})
+	}
 	slices.SortFunc(farmUnits, func(a, b domain.GroupUnit) int {
-		return int(a.TechLevel) - int(b.TechLevel)
+		return cmp.Compare(a.TechLevel, b.TechLevel)
 	})
 	if len(farmUnits) > 0 {
 		colony.FarmGroups = []domain.FarmGroup{
@@ -160,11 +176,16 @@ func (s *GameService) AddEmpire(dirPath string, empireNo int, name string, homeW
 
 	// Build mining groups — one per deposit, Mine units split evenly.
 	var hwDepositIDs []domain.DepositID
+	hwPlanetFound := false
 	for _, p := range cluster.Planets {
 		if p.ID == homeWorldID {
 			hwDepositIDs = p.Deposits
+			hwPlanetFound = true
 			break
 		}
+	}
+	if !hwPlanetFound {
+		return 0, "", "", fmt.Errorf("addEmpire: homeworld planet %d not found in cluster", homeWorldID)
 	}
 	colony.MiningGroups = buildMiningGroups(colony.Inventory, hwDepositIDs)
 
@@ -496,17 +517,22 @@ func buildMiningGroups(inventory []domain.Inventory, depositIDs []domain.Deposit
 		TechLevel domain.TechLevel
 		Quantity  int
 	}
-	var pool []mineEntry
+	// Aggregate by TechLevel in case multiple inventory rows share a TL.
+	mineByTL := make(map[domain.TechLevel]int)
 	for _, inv := range inventory {
 		if inv.Unit == domain.Mine && inv.QuantityAssembled > 0 {
-			pool = append(pool, mineEntry{inv.TechLevel, inv.QuantityAssembled})
+			mineByTL[inv.TechLevel] += inv.QuantityAssembled
 		}
 	}
-	if len(depositIDs) == 0 || len(pool) == 0 {
+	if len(depositIDs) == 0 || len(mineByTL) == 0 {
 		return nil
 	}
+	var pool []mineEntry
+	for tl, qty := range mineByTL {
+		pool = append(pool, mineEntry{tl, qty})
+	}
 	slices.SortFunc(pool, func(a, b mineEntry) int {
-		return int(a.TechLevel) - int(b.TechLevel)
+		return cmp.Compare(a.TechLevel, b.TechLevel)
 	})
 
 	total := 0
