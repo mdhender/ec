@@ -215,10 +215,10 @@ _Impact scan:_
 - Search commands: N/A
 
 **Acceptance criteria:**
-- [ ] `cd apps/web && npm run build` succeeds
-- [ ] `KindCount` and `DashboardSummary` are exported from `lib/types.ts`
-- [ ] `fetchDashboard` is exported from `lib/api.ts`
-- [ ] New/changed API matches an existing pattern (or deviation documented)
+- [x] `cd apps/web && npm run build` succeeds
+- [x] `KindCount` and `DashboardSummary` are exported from `lib/types.ts`
+- [x] `fetchDashboard` is exported from `lib/api.ts`
+- [x] New/changed API matches an existing pattern (or deviation documented)
 
 **Tests to add/update:**
 - None beyond build success.
@@ -372,13 +372,13 @@ _Impact scan:_
 - Search commands: N/A
 
 **Acceptance criteria:**
-- [ ] `cd apps/web && npm run build` succeeds
-- [ ] `ColoniesPage` fetches dashboard data and renders colony counts by kind
-- [ ] `ColoniesPage` shows "No colonies." when `colony_count == 0`
-- [ ] `ColoniesPage` handles loading and error states
-- [ ] `ShipsPage` renders the correct placeholder message
-- [ ] `StarListPage` renders the correct placeholder message
-- [ ] New/changed API matches an existing pattern (or deviation documented)
+- [x] `cd apps/web && npm run build` succeeds
+- [x] `ColoniesPage` fetches dashboard data and renders colony counts by kind
+- [x] `ColoniesPage` shows "No colonies." when `colony_count == 0`
+- [x] `ColoniesPage` handles loading and error states
+- [x] `ShipsPage` renders the correct placeholder message
+- [x] `StarListPage` renders the correct placeholder message
+- [x] New/changed API matches an existing pattern (or deviation documented)
 
 **Tests to add/update:**
 - None beyond build success.
@@ -494,13 +494,13 @@ _Impact scan:_
 - Search commands: `grep -n 'Page' apps/web/src/App.tsx`
 
 **Acceptance criteria:**
-- [ ] `cd apps/web && npm run build` succeeds
-- [ ] `Page` type includes `"colonies"`, `"ships"`, `"star-list"`
-- [ ] Sidebar has Colonies, Ships, and Star List nav items with correct icons
-- [ ] Each new nav item highlights when its page is active
-- [ ] `renderPage()` renders the correct component for each new page
-- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
-- [ ] New/changed API matches an existing pattern (or deviation documented)
+- [x] `cd apps/web && npm run build` succeeds
+- [x] `Page` type includes `"colonies"`, `"ships"`, `"star-list"`
+- [x] Sidebar has Colonies, Ships, and Star List nav items with correct icons
+- [x] Each new nav item highlights when its page is active
+- [x] `renderPage()` renders the correct component for each new page
+- [x] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [x] New/changed API matches an existing pattern (or deviation documented)
 
 **Tests to add/update:**
 - None beyond build success.
@@ -645,17 +645,17 @@ _Impact scan:_
 - Search commands: `grep -n 'DashboardPage' apps/web/src/App.tsx`
 
 **Acceptance criteria:**
-- [ ] `cd apps/web && npm run build` succeeds
-- [ ] `DashboardPage` accepts `empireNo` and the four `onNavigate*` callbacks
-- [ ] Dashboard fetches `GET /api/:empireNo/dashboard` on mount
-- [ ] Three cards render with correct title, count, and kind breakdown
-- [ ] Colonies and Ships cards have "View details →" links; Planets card does not
-- [ ] Skeleton placeholders render while loading
-- [ ] Error message renders on fetch failure
-- [ ] Existing Orders and Reports buttons are preserved below the cards
-- [ ] `App.tsx` passes all required props to `DashboardPage`
-- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
-- [ ] New/changed API matches an existing pattern (or deviation documented)
+- [x] `cd apps/web && npm run build` succeeds
+- [x] `DashboardPage` accepts `empireNo` and the four `onNavigate*` callbacks
+- [x] Dashboard fetches `GET /api/:empireNo/dashboard` on mount
+- [x] Three cards render with correct title, count, and kind breakdown
+- [x] Colonies and Ships cards have "View details →" links; Planets card does not
+- [x] Skeleton placeholders render while loading
+- [x] Error message renders on fetch failure
+- [x] Existing Orders and Reports buttons are preserved below the cards
+- [x] `App.tsx` passes all required props to `DashboardPage`
+- [x] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [x] New/changed API matches an existing pattern (or deviation documented)
 
 **Tests to add/update:**
 - None beyond build success.
@@ -690,10 +690,10 @@ _Impact scan:_
    Fix any TypeScript errors or Vite build failures.
 
 **Acceptance criteria:**
-- [ ] No unused imports in modified files
-- [ ] `DashboardPage` props in `App.tsx` match the component interface exactly
-- [ ] Placeholder strings match the spec
-- [ ] `cd apps/web && npm run build` succeeds with zero errors
+- [x] No unused imports in modified files
+- [x] `DashboardPage` props in `App.tsx` match the component interface exactly
+- [x] Placeholder strings match the spec
+- [x] `cd apps/web && npm run build` succeeds with zero errors
 
 **Tests to add/update:**
 - None.
@@ -704,8 +704,8 @@ _Impact scan:_
 
 | Task | Title                              | Status | Depends On | Agent/Thread | Notes |
 |------|------------------------------------|--------|------------|--------------|-------|
-| 1    | API types and client function      | TODO   | —          |              |       |
-| 2    | New summary pages                  | TODO   | 1          |              |       |
-| 3    | App routing and sidebar navigation | TODO   | 2          |              |       |
-| 4    | Dashboard cards                    | TODO   | 1, 3       |              |       |
-| 5    | Audit and build                    | TODO   | 1–4        |              |       |
+| 1    | API types and client function      | DONE   | —          |              |       |
+| 2    | New summary pages                  | DONE   | 1          |              |       |
+| 3    | App routing and sidebar navigation | DONE   | 2          |              |       |
+| 4    | Dashboard cards                    | DONE   | 1, 3       |              |       |
+| 5    | Audit and build                    | DONE   | 1–4        |              |       |

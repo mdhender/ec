@@ -4,6 +4,7 @@
 import { authHeaders, setToken } from "./auth";
 import type {
   CreateUserRequest,
+  DashboardSummary,
   LoginRequest,
   LoginResponse,
   MeResponse,
@@ -106,6 +107,10 @@ export async function submitOrders(
     body: orders,
     headers: { "Content-Type": "text/plain" },
   });
+}
+
+export async function fetchDashboard(empireNo: number): Promise<DashboardSummary> {
+  return apiFetch<DashboardSummary>(`/${empireNo}/dashboard`);
 }
 
 export async function fetchReports(empireNo: number): Promise<ReportSummary[]> {

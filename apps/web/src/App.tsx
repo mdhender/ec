@@ -3,6 +3,9 @@ import {
   HomeIcon,
   DocumentTextIcon,
   ClipboardDocumentListIcon,
+  BuildingOffice2Icon,
+  RocketLaunchIcon,
+  MapIcon,
 } from "@heroicons/react/24/outline";
 import { clearToken } from "./lib/auth";
 import { fetchMe, loginWithMagicLink } from "./lib/api";
@@ -12,9 +15,20 @@ import DashboardPage from "./pages/DashboardPage";
 import OrdersPage from "./pages/OrdersPage";
 import ReportsPage from "./pages/ReportsPage";
 import ReportPage from "./pages/ReportPage";
+import ColoniesPage from "./pages/ColoniesPage";
+import ShipsPage from "./pages/ShipsPage";
+import StarListPage from "./pages/StarListPage";
 import type { NavItem } from "./components/AppShell";
 
-type Page = "dashboard" | "orders" | "reports" | "report" | "admin-users";
+type Page =
+  | "dashboard"
+  | "orders"
+  | "reports"
+  | "report"
+  | "admin-users"
+  | "colonies"
+  | "ships"
+  | "star-list";
 
 function ClusterUnderConstruction() {
   return (
@@ -111,6 +125,27 @@ function App() {
       current: page === "reports" || page === "report",
       onClick: () => setPage("reports"),
     },
+    {
+      name: "Colonies",
+      href: "#",
+      icon: BuildingOffice2Icon,
+      current: page === "colonies",
+      onClick: () => setPage("colonies"),
+    },
+    {
+      name: "Ships",
+      href: "#",
+      icon: RocketLaunchIcon,
+      current: page === "ships",
+      onClick: () => setPage("ships"),
+    },
+    {
+      name: "Star List",
+      href: "#",
+      icon: MapIcon,
+      current: page === "star-list",
+      onClick: () => setPage("star-list"),
+    },
   ];
 
   if (loading) {
@@ -145,12 +180,21 @@ function App() {
         );
       case "admin-users":
         return <AdminUsersPage />;
+      case "colonies":
+        return <ColoniesPage empireNo={empireNo} />;
+      case "ships":
+        return <ShipsPage />;
+      case "star-list":
+        return <StarListPage />;
       default:
         return (
           <DashboardPage
             empireName={empireName}
+            empireNo={empireNo}
             onNavigateOrders={() => setPage("orders")}
             onNavigateReports={() => setPage("reports")}
+            onNavigateColonies={() => setPage("colonies")}
+            onNavigateShips={() => setPage("ships")}
           />
         );
     }

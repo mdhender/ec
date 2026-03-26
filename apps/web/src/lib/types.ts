@@ -46,3 +46,16 @@ export interface CreateUserRequest {
   password: string;
   role: string;
 }
+
+export interface KindCount {
+  kind: string;
+  count: number;
+}
+
+export interface DashboardSummary {
+  colony_count: number;
+  colony_kinds: KindCount[];
+  ship_count: number;
+  planet_count: number;
+  planet_kinds: KindCount[];
+}
