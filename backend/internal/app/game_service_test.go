@@ -157,6 +157,44 @@ func TestCreateGame(t *testing.T) {
 
 // --- TestAddEmpire ---
 
+func defaultColonyTemplate() domain.ColonyTemplate {
+	return domain.ColonyTemplate{
+		Kind:      domain.OpenAir,
+		TechLevel: 1,
+		Inventory: []domain.Inventory{
+			{Unit: domain.Farm, TechLevel: 1, QuantityAssembled: 10},
+			{Unit: domain.Mine, TechLevel: 1, QuantityAssembled: 20},
+			{Unit: domain.Factory, TechLevel: 1, QuantityAssembled: 5},
+		},
+	}
+}
+
+// makeTestClusterWithDeposits builds a cluster with one system, one star,
+// one terrestrial planet that has the given deposits pre-populated.
+func makeTestClusterWithDeposits(planetID domain.PlanetID, depositIDs []domain.DepositID) domain.Cluster {
+	deposits := make([]domain.Deposit, len(depositIDs))
+	for i, id := range depositIDs {
+		deposits[i] = domain.Deposit{
+			ID:                id,
+			Resource:          domain.METALLICS,
+			YieldPct:          50,
+			QuantityRemaining: 1000,
+		}
+	}
+	return domain.Cluster{
+		Systems: []domain.System{
+			{ID: 1, Location: domain.Coords{X: 10, Y: 10, Z: 10}},
+		},
+		Stars: []domain.Star{
+			{ID: 1, System: 1, Orbits: [10]domain.PlanetID{planetID}},
+		},
+		Planets: []domain.Planet{
+			{ID: planetID, Kind: domain.Terrestrial, Habitability: 25, Deposits: depositIDs},
+		},
+		Deposits: deposits,
+	}
+}
+
 // makeTestCluster builds a minimal cluster with one system, one star, and a terrestrial planet.
 func makeTestCluster(planetID domain.PlanetID) domain.Cluster {
 	return domain.Cluster{
@@ -179,7 +217,7 @@ func TestAddEmpire(t *testing.T) {
 	t.Run("auto-assigns 1 for empty list", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()}}
 		store.games[dir] = domain.Game{
 			ActiveHomeWorldID: hwPlanetID,
 			Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
@@ -203,7 +241,7 @@ func TestAddEmpire(t *testing.T) {
 	t.Run("auto-assigns max+1 for non-empty list", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()}}
 		store.games[dir] = domain.Game{
 			ActiveHomeWorldID: hwPlanetID,
 			Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID, Empires: []domain.EmpireID{3, 7}}},
@@ -227,7 +265,7 @@ func TestAddEmpire(t *testing.T) {
 	t.Run("fails on duplicate empire", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()}}
 		store.games[dir] = domain.Game{
 			ActiveHomeWorldID: hwPlanetID,
 			Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID, Empires: []domain.EmpireID{5}}},
@@ -244,7 +282,7 @@ func TestAddEmpire(t *testing.T) {
 	t.Run("generates magic link UUID", func(t *testing.T) {
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()}}
 		store.games[dir] = domain.Game{
 			ActiveHomeWorldID: hwPlanetID,
 			Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
@@ -277,7 +315,7 @@ func TestAddEmpire_RequiresHomeWorld(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()}}
 	store.games[dir] = domain.Game{
 		Empires: []domain.Empire{},
 		Races:   []domain.Race{},
@@ -295,7 +333,7 @@ func TestAddEmpire_HomeWorldOverride(t *testing.T) {
 	const hwPlanetID domain.PlanetID = 200
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()}}
 	store.games[dir] = domain.Game{
 		ActiveHomeWorldID: 999, // different active homeworld
 		Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
@@ -322,7 +360,7 @@ func TestAddEmpire_HomeWorldNotFound(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()}}
 	store.games[dir] = domain.Game{
 		Races:   []domain.Race{},
 		Empires: []domain.Empire{},
@@ -341,7 +379,7 @@ func TestAddEmpire_HomeWorldFull(t *testing.T) {
 	const hwPlanetID domain.PlanetID = 300
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()}}
 
 	// Create a race with 25 empires
 	empireIDs := make([]domain.EmpireID, 25)
@@ -393,7 +431,7 @@ func TestScrubEmpireName(t *testing.T) {
 			const hwPlanetID domain.PlanetID = 400
 			store := newMockStore()
 			clusterStore := newMockClusterStore()
-			svc := &app.GameService{Store: store, Cluster: clusterStore}
+			svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()}}
 			store.games[dir] = domain.Game{
 				ActiveHomeWorldID: hwPlanetID,
 				Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
@@ -426,7 +464,7 @@ func TestScrubEmpireName(t *testing.T) {
 		const hwPlanetID domain.PlanetID = 400
 		store := newMockStore()
 		clusterStore := newMockClusterStore()
-		svc := &app.GameService{Store: store, Cluster: clusterStore}
+		svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()}}
 		store.games[dir] = domain.Game{
 			ActiveHomeWorldID: hwPlanetID,
 			Races:             []domain.Race{{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID}},
@@ -818,5 +856,350 @@ func TestCreateHomeWorld_TemplateError(t *testing.T) {
 
 	if _, err := svc.CreateHomeWorld(dir, 1, 0); err == nil {
 		t.Fatal("expected error when template read fails, got nil")
+	}
+}
+
+func TestAddEmpire_ColonyFromTemplate(t *testing.T) {
+	const hwPlanetID = domain.PlanetID(100)
+	store := newMockStore()
+	_ = store.WriteGame(".", domain.Game{})
+	_ = store.WriteAuthConfig(".", domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}})
+
+	clusterStore := newMockClusterStore()
+	cluster := makeTestCluster(hwPlanetID)
+	_ = clusterStore.WriteCluster(".", cluster, true)
+
+	tmpl := defaultColonyTemplate()
+	svc := &app.GameService{
+		Store:     store,
+		Cluster:   clusterStore,
+		Templates: &mockTemplateStore{colonyTemplate: tmpl},
+	}
+
+	// Set up a race/homeworld first
+	game, _ := store.ReadGame(".")
+	game.Races = append(game.Races, domain.Race{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID})
+	game.ActiveHomeWorldID = hwPlanetID
+	_ = store.WriteGame(".", game)
+
+	_, _, _, err := svc.AddEmpire(".", 0, "Test Empire", hwPlanetID)
+	if err != nil {
+		t.Fatalf("AddEmpire error: %v", err)
+	}
+
+	got, _ := clusterStore.ReadCluster(".")
+	if len(got.Colonies) != 1 {
+		t.Fatalf("expected 1 colony, got %d", len(got.Colonies))
+	}
+	c := got.Colonies[0]
+	if c.Planet != hwPlanetID {
+		t.Errorf("colony.Planet = %d, want %d", c.Planet, hwPlanetID)
+	}
+	if c.Kind != domain.OpenAir {
+		t.Errorf("colony.Kind = %v, want OpenAir", c.Kind)
+	}
+	if c.TechLevel != 1 {
+		t.Errorf("colony.TechLevel = %d, want 1", c.TechLevel)
+	}
+	if len(c.Inventory) != 3 {
+		t.Errorf("colony.Inventory len = %d, want 3", len(c.Inventory))
+	}
+	// Verify deep copy: modifying returned colony inventory should not affect template
+	if len(c.Inventory) > 0 {
+		origQty := tmpl.Inventory[0].QuantityAssembled
+		c.Inventory[0].QuantityAssembled = 999
+		if tmpl.Inventory[0].QuantityAssembled != origQty {
+			t.Error("colony.Inventory is not a deep copy — template was modified")
+		}
+	}
+}
+
+func TestAddEmpire_FarmGroup(t *testing.T) {
+	const hwPlanetID = domain.PlanetID(100)
+	store := newMockStore()
+	_ = store.WriteGame(".", domain.Game{})
+	_ = store.WriteAuthConfig(".", domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}})
+
+	clusterStore := newMockClusterStore()
+	_ = clusterStore.WriteCluster(".", makeTestCluster(hwPlanetID), true)
+
+	tmpl := domain.ColonyTemplate{
+		Kind:      domain.OpenAir,
+		TechLevel: 1,
+		Inventory: []domain.Inventory{
+			{Unit: domain.Farm, TechLevel: 1, QuantityAssembled: 10},
+			{Unit: domain.Farm, TechLevel: 2, QuantityAssembled: 5},
+			{Unit: domain.Mine, TechLevel: 1, QuantityAssembled: 8},
+		},
+	}
+	svc := &app.GameService{
+		Store:     store,
+		Cluster:   clusterStore,
+		Templates: &mockTemplateStore{colonyTemplate: tmpl},
+	}
+
+	game, _ := store.ReadGame(".")
+	game.Races = append(game.Races, domain.Race{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID})
+	game.ActiveHomeWorldID = hwPlanetID
+	_ = store.WriteGame(".", game)
+
+	_, _, _, err := svc.AddEmpire(".", 0, "Test Empire", hwPlanetID)
+	if err != nil {
+		t.Fatalf("AddEmpire error: %v", err)
+	}
+
+	got, _ := clusterStore.ReadCluster(".")
+	if len(got.Colonies) != 1 {
+		t.Fatalf("expected 1 colony, got %d", len(got.Colonies))
+	}
+	c := got.Colonies[0]
+	if len(c.FarmGroups) != 1 {
+		t.Fatalf("expected 1 FarmGroup, got %d", len(c.FarmGroups))
+	}
+	fg := c.FarmGroups[0]
+	if fg.ID != 1 {
+		t.Errorf("FarmGroup.ID = %d, want 1", fg.ID)
+	}
+	if len(fg.Units) != 2 {
+		t.Fatalf("expected 2 farm sub-groups, got %d", len(fg.Units))
+	}
+	if fg.Units[0].TechLevel != 1 || fg.Units[0].Quantity != 10 {
+		t.Errorf("farm sub-group[0] = {TL:%d Qty:%d}, want {TL:1 Qty:10}", fg.Units[0].TechLevel, fg.Units[0].Quantity)
+	}
+	if fg.Units[1].TechLevel != 2 || fg.Units[1].Quantity != 5 {
+		t.Errorf("farm sub-group[1] = {TL:%d Qty:%d}, want {TL:2 Qty:5}", fg.Units[1].TechLevel, fg.Units[1].Quantity)
+	}
+}
+
+func TestAddEmpire_FarmGroup_NoFarms(t *testing.T) {
+	const hwPlanetID = domain.PlanetID(100)
+	store := newMockStore()
+	_ = store.WriteGame(".", domain.Game{})
+	_ = store.WriteAuthConfig(".", domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}})
+
+	clusterStore := newMockClusterStore()
+	_ = clusterStore.WriteCluster(".", makeTestCluster(hwPlanetID), true)
+
+	tmpl := domain.ColonyTemplate{
+		Kind:      domain.OpenAir,
+		TechLevel: 1,
+		Inventory: []domain.Inventory{
+			{Unit: domain.Mine, TechLevel: 1, QuantityAssembled: 10},
+		},
+	}
+	svc := &app.GameService{
+		Store:     store,
+		Cluster:   clusterStore,
+		Templates: &mockTemplateStore{colonyTemplate: tmpl},
+	}
+
+	game, _ := store.ReadGame(".")
+	game.Races = append(game.Races, domain.Race{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID})
+	game.ActiveHomeWorldID = hwPlanetID
+	_ = store.WriteGame(".", game)
+
+	_, _, _, err := svc.AddEmpire(".", 0, "Test Empire", hwPlanetID)
+	if err != nil {
+		t.Fatalf("AddEmpire error: %v", err)
+	}
+
+	got, _ := clusterStore.ReadCluster(".")
+	c := got.Colonies[0]
+	if len(c.FarmGroups) != 0 {
+		t.Errorf("expected no FarmGroups, got %d", len(c.FarmGroups))
+	}
+}
+
+func TestBuildMiningGroups(t *testing.T) {
+	tests := []struct {
+		name       string
+		inventory  []domain.Inventory
+		depositIDs []domain.DepositID
+		wantNil    bool
+		wantGroups []struct {
+			depositID domain.DepositID
+			units     []domain.GroupUnit
+		}
+	}{
+		{
+			name: "even split",
+			inventory: []domain.Inventory{
+				{Unit: domain.Mine, TechLevel: 1, QuantityAssembled: 20},
+			},
+			depositIDs: []domain.DepositID{1, 2, 3},
+			wantGroups: []struct {
+				depositID domain.DepositID
+				units     []domain.GroupUnit
+			}{
+				{1, []domain.GroupUnit{{TechLevel: 1, Quantity: 7}}},
+				{2, []domain.GroupUnit{{TechLevel: 1, Quantity: 7}}},
+				{3, []domain.GroupUnit{{TechLevel: 1, Quantity: 6}}},
+			},
+		},
+		{
+			name: "remainder round-robin",
+			inventory: []domain.Inventory{
+				{Unit: domain.Mine, TechLevel: 1, QuantityAssembled: 10},
+			},
+			depositIDs: []domain.DepositID{1, 2, 3},
+			wantGroups: []struct {
+				depositID domain.DepositID
+				units     []domain.GroupUnit
+			}{
+				{1, []domain.GroupUnit{{TechLevel: 1, Quantity: 4}}},
+				{2, []domain.GroupUnit{{TechLevel: 1, Quantity: 3}}},
+				{3, []domain.GroupUnit{{TechLevel: 1, Quantity: 3}}},
+			},
+		},
+		{
+			name: "multi-TL greedy",
+			inventory: []domain.Inventory{
+				{Unit: domain.Mine, TechLevel: 1, QuantityAssembled: 5},
+				{Unit: domain.Mine, TechLevel: 2, QuantityAssembled: 5},
+			},
+			depositIDs: []domain.DepositID{1, 2},
+			wantGroups: []struct {
+				depositID domain.DepositID
+				units     []domain.GroupUnit
+			}{
+				{1, []domain.GroupUnit{{TechLevel: 1, Quantity: 5}}},
+				{2, []domain.GroupUnit{{TechLevel: 2, Quantity: 5}}},
+			},
+		},
+		{
+			name:       "no deposits",
+			inventory:  []domain.Inventory{{Unit: domain.Mine, TechLevel: 1, QuantityAssembled: 10}},
+			depositIDs: nil,
+			wantNil:    true,
+		},
+		{
+			name:       "no mines",
+			inventory:  []domain.Inventory{{Unit: domain.Farm, TechLevel: 1, QuantityAssembled: 10}},
+			depositIDs: []domain.DepositID{1, 2, 3},
+			wantNil:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := app.BuildMiningGroupsForTest(tt.inventory, tt.depositIDs)
+			if tt.wantNil {
+				if got != nil {
+					t.Errorf("expected nil, got %v", got)
+				}
+				return
+			}
+			if len(got) != len(tt.wantGroups) {
+				t.Fatalf("expected %d groups, got %d", len(tt.wantGroups), len(got))
+			}
+			for i, wg := range tt.wantGroups {
+				if got[i].Deposit != wg.depositID {
+					t.Errorf("group[%d].Deposit = %d, want %d", i, got[i].Deposit, wg.depositID)
+				}
+				if got[i].ID != domain.MiningGroupID(i+1) {
+					t.Errorf("group[%d].ID = %d, want %d", i, got[i].ID, i+1)
+				}
+				if len(got[i].Units) != len(wg.units) {
+					t.Fatalf("group[%d] units len = %d, want %d", i, len(got[i].Units), len(wg.units))
+				}
+				for j, wu := range wg.units {
+					if got[i].Units[j].TechLevel != wu.TechLevel || got[i].Units[j].Quantity != wu.Quantity {
+						t.Errorf("group[%d].Units[%d] = {TL:%d Qty:%d}, want {TL:%d Qty:%d}",
+							i, j, got[i].Units[j].TechLevel, got[i].Units[j].Quantity,
+							wu.TechLevel, wu.Quantity)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestAddEmpire_MiningGroups(t *testing.T) {
+	const hwPlanetID = domain.PlanetID(100)
+	depositIDs := []domain.DepositID{10, 11, 12}
+
+	store := newMockStore()
+	_ = store.WriteGame(".", domain.Game{})
+	_ = store.WriteAuthConfig(".", domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}})
+
+	clusterStore := newMockClusterStore()
+	_ = clusterStore.WriteCluster(".", makeTestClusterWithDeposits(hwPlanetID, depositIDs), true)
+
+	tmpl := domain.ColonyTemplate{
+		Kind:      domain.OpenAir,
+		TechLevel: 1,
+		Inventory: []domain.Inventory{
+			{Unit: domain.Mine, TechLevel: 1, QuantityAssembled: 9},
+		},
+	}
+	svc := &app.GameService{
+		Store:     store,
+		Cluster:   clusterStore,
+		Templates: &mockTemplateStore{colonyTemplate: tmpl},
+	}
+
+	game, _ := store.ReadGame(".")
+	game.Races = append(game.Races, domain.Race{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID})
+	game.ActiveHomeWorldID = hwPlanetID
+	_ = store.WriteGame(".", game)
+
+	_, _, _, err := svc.AddEmpire(".", 0, "Test Empire", hwPlanetID)
+	if err != nil {
+		t.Fatalf("AddEmpire error: %v", err)
+	}
+
+	got, _ := clusterStore.ReadCluster(".")
+	c := got.Colonies[0]
+	if len(c.MiningGroups) != 3 {
+		t.Fatalf("expected 3 MiningGroups, got %d", len(c.MiningGroups))
+	}
+	for i, depID := range depositIDs {
+		mg := c.MiningGroups[i]
+		if mg.Deposit != depID {
+			t.Errorf("MiningGroup[%d].Deposit = %d, want %d", i, mg.Deposit, depID)
+		}
+		if mg.ID != domain.MiningGroupID(i+1) {
+			t.Errorf("MiningGroup[%d].ID = %d, want %d", i, mg.ID, i+1)
+		}
+		if len(mg.Units) != 1 || mg.Units[0].TechLevel != 1 || mg.Units[0].Quantity != 3 {
+			t.Errorf("MiningGroup[%d].Units = %v, want [{TL:1 Qty:3}]", i, mg.Units)
+		}
+	}
+	// Verify colony.Inventory not modified
+	if c.Inventory[0].QuantityAssembled != 9 {
+		t.Errorf("colony.Inventory[0].QuantityAssembled = %d, want 9 (must not be mutated)", c.Inventory[0].QuantityAssembled)
+	}
+}
+
+func TestAddEmpire_MiningGroups_NoDeposits(t *testing.T) {
+	const hwPlanetID = domain.PlanetID(100)
+
+	store := newMockStore()
+	_ = store.WriteGame(".", domain.Game{})
+	_ = store.WriteAuthConfig(".", domain.AuthConfig{MagicLinks: map[string]domain.AuthLink{}})
+
+	clusterStore := newMockClusterStore()
+	_ = clusterStore.WriteCluster(".", makeTestCluster(hwPlanetID), true)
+
+	svc := &app.GameService{
+		Store:     store,
+		Cluster:   clusterStore,
+		Templates: &mockTemplateStore{colonyTemplate: defaultColonyTemplate()},
+	}
+
+	game, _ := store.ReadGame(".")
+	game.Races = append(game.Races, domain.Race{ID: domain.RaceID(hwPlanetID), HomeWorld: hwPlanetID})
+	game.ActiveHomeWorldID = hwPlanetID
+	_ = store.WriteGame(".", game)
+
+	_, _, _, err := svc.AddEmpire(".", 0, "Test Empire", hwPlanetID)
+	if err != nil {
+		t.Fatalf("AddEmpire error: %v", err)
+	}
+
+	got, _ := clusterStore.ReadCluster(".")
+	c := got.Colonies[0]
+	if c.MiningGroups != nil {
+		t.Errorf("expected nil MiningGroups, got %v", c.MiningGroups)
 	}
 }
