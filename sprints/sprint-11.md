@@ -15,8 +15,11 @@
    lists the exact tests to add or update. (Frontend: TypeScript compilation
    is the test — all tasks must leave `npm run build` passing.)
 
-3. **No mixed concerns.** Never combine semantic translation with cleanup or
-   refactoring in the same task.
+3. **No unrelated cleanup.** Do not bundle opportunistic refactoring into a
+   feature task. Required follow-through cleanup belongs in the same task
+   when it is directly caused by the change: stale references, dead helpers,
+   guard clauses, invariant fixes, API alignment within the touched
+   subsystem, and tests.
 
 4. **Tasks must fit in context.** Each task description must be self-contained.
    Include file paths, component names, prop types, and expected behavior
@@ -26,6 +29,25 @@
    passing.
 
 6. **Small diffs only.** Prefer several small tasks over one large one.
+
+7. **Every task must state failure paths and invariants.** If a task does
+   lookup, selection, indexing, parsing, ID allocation, or file/template
+   input, the task must define behavior for not-found / invalid / empty /
+   duplicate cases and name tests for them.
+
+8. **Every task must include an impact scan.** List the existing helpers,
+   fields, comments, call sites, and tests that may become stale because of
+   the change. Remove/update them in the same task, or explicitly say why
+   they remain.
+
+9. **New/changed APIs must match an existing pattern.** For ports, stores,
+   constructors, and method signatures, the task must cite the existing
+   pattern it follows. If it deviates, the task must briefly justify the
+   deviation.
+
+10. **Validation ownership must be explicit.** For external inputs
+    (JSON/templates/CLI/API payloads), the task must say which SOUSA layer
+    validates invariants (`domain` vs `app`) and what is validated.
 
 ---
 
@@ -116,6 +138,13 @@ cd apps/web && npm run build
 No automated test suite exists for the frontend. TypeScript compilation
 success (`tsc -b`) is the acceptance gate for all tasks.
 
+**Audit-left guidance:**
+Audit items belong with the task that introduced the risk. SOUSA checks,
+stale-reference scans, guard/negative tests, and API-pattern checks must
+appear in the relevant task's design checklist or acceptance criteria. A
+final audit task is only a last verification step — it should confirm
+health, not discover new issues.
+
 ---
 
 ## Tasks
@@ -157,10 +186,39 @@ export async function fetchDashboard(empireNo: number): Promise<DashboardSummary
 
 Add `DashboardSummary` to the import from `./types`.
 
+**Design review checklist:**
+
+_SOUSA layers touched:_
+- [ ] domain
+- [ ] app
+- [ ] infra
+- [ ] delivery
+- [ ] runtime
+- Allowed dependency direction: N/A — frontend only
+
+_Existing pattern to follow:_
+- `lib/types.ts` — existing interface definitions (e.g., `OrderEntry`)
+- `lib/api.ts` — `apiFetch<T>` pattern used by `fetchOrders`, `fetchReports`
+
+_Failure paths / guard clauses:_
+- [ ] Not-found behavior specified (N/A — type definitions only)
+- [ ] Empty/nil/invalid input behavior specified (N/A)
+- [ ] ID/index bounds behavior specified (N/A)
+
+_Invariants / validation:_
+- [ ] Uniqueness / ID generation rule stated (N/A)
+- [ ] Ordering or state preconditions stated (N/A)
+- [ ] Validation rules listed and layer assigned (N/A — frontend types mirror backend)
+
+_Impact scan:_
+- Helpers/call sites/fields/comments/tests to revisit: None — additive
+- Search commands: N/A
+
 **Acceptance criteria:**
 - [ ] `cd apps/web && npm run build` succeeds
 - [ ] `KindCount` and `DashboardSummary` are exported from `lib/types.ts`
 - [ ] `fetchDashboard` is exported from `lib/api.ts`
+- [ ] New/changed API matches an existing pattern (or deviation documented)
 
 **Tests to add/update:**
 - None beyond build success.
@@ -285,6 +343,34 @@ export default function StarListPage() {
 }
 ```
 
+**Design review checklist:**
+
+_SOUSA layers touched:_
+- [ ] domain
+- [ ] app
+- [ ] infra
+- [ ] delivery
+- [ ] runtime
+- Allowed dependency direction: N/A — frontend only
+
+_Existing pattern to follow:_
+- `OrdersPage.tsx` — `useEffect` + `useState` data-fetching pattern
+- `ReportsPage.tsx` — loading/error state handling
+
+_Failure paths / guard clauses:_
+- [x] Not-found behavior specified: `ColoniesPage` shows "No colonies." when `colony_count == 0`
+- [x] Empty/nil/invalid input behavior specified: loading and error states handled
+- [ ] ID/index bounds behavior specified (N/A)
+
+_Invariants / validation:_
+- [ ] Uniqueness / ID generation rule stated (N/A)
+- [ ] Ordering or state preconditions stated (N/A)
+- [ ] Validation rules listed and layer assigned (N/A — frontend display only)
+
+_Impact scan:_
+- Helpers/call sites/fields/comments/tests to revisit: None — new files
+- Search commands: N/A
+
 **Acceptance criteria:**
 - [ ] `cd apps/web && npm run build` succeeds
 - [ ] `ColoniesPage` fetches dashboard data and renders colony counts by kind
@@ -292,6 +378,7 @@ export default function StarListPage() {
 - [ ] `ColoniesPage` handles loading and error states
 - [ ] `ShipsPage` renders the correct placeholder message
 - [ ] `StarListPage` renders the correct placeholder message
+- [ ] New/changed API matches an existing pattern (or deviation documented)
 
 **Tests to add/update:**
 - None beyond build success.
@@ -378,12 +465,42 @@ case "star-list":
   return <StarListPage />;
 ```
 
+**Design review checklist:**
+
+_SOUSA layers touched:_
+- [ ] domain
+- [ ] app
+- [ ] infra
+- [ ] delivery
+- [ ] runtime
+- Allowed dependency direction: N/A — frontend only
+
+_Existing pattern to follow:_
+- Existing `navigation` array items in `App.tsx` (Dashboard, Orders, Reports)
+- `renderPage()` switch pattern in `App.tsx`
+
+_Failure paths / guard clauses:_
+- [ ] Not-found behavior specified (N/A — static page mapping)
+- [ ] Empty/nil/invalid input behavior specified (N/A)
+- [ ] ID/index bounds behavior specified (N/A)
+
+_Invariants / validation:_
+- [ ] Uniqueness / ID generation rule stated (N/A)
+- [x] Ordering or state preconditions stated: nav items added after "Reports"
+- [ ] Validation rules listed and layer assigned (N/A)
+
+_Impact scan:_
+- Helpers/call sites/fields/comments/tests to revisit: `Page` type, `renderPage()`, `navigation` array
+- Search commands: `grep -n 'Page' apps/web/src/App.tsx`
+
 **Acceptance criteria:**
 - [ ] `cd apps/web && npm run build` succeeds
 - [ ] `Page` type includes `"colonies"`, `"ships"`, `"star-list"`
 - [ ] Sidebar has Colonies, Ships, and Star List nav items with correct icons
 - [ ] Each new nav item highlights when its page is active
 - [ ] `renderPage()` renders the correct component for each new page
+- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [ ] New/changed API matches an existing pattern (or deviation documented)
 
 **Tests to add/update:**
 - None beyond build success.
@@ -499,6 +616,34 @@ unchanged.
 />
 ```
 
+**Design review checklist:**
+
+_SOUSA layers touched:_
+- [ ] domain
+- [ ] app
+- [ ] infra
+- [ ] delivery
+- [ ] runtime
+- Allowed dependency direction: N/A — frontend only
+
+_Existing pattern to follow:_
+- `OrdersPage.tsx` — `useEffect` + `useState` data-fetching pattern
+- Existing `DashboardPage.tsx` props pattern (extends with new callbacks)
+
+_Failure paths / guard clauses:_
+- [x] Not-found behavior specified: error message rendered inline on fetch failure
+- [x] Empty/nil/invalid input behavior specified: skeleton placeholders during loading
+- [ ] ID/index bounds behavior specified (N/A)
+
+_Invariants / validation:_
+- [ ] Uniqueness / ID generation rule stated (N/A)
+- [x] Ordering or state preconditions stated: existing Orders/Reports buttons preserved below cards
+- [ ] Validation rules listed and layer assigned (N/A — frontend display only)
+
+_Impact scan:_
+- Helpers/call sites/fields/comments/tests to revisit: `DashboardPage` props in `App.tsx` must be updated
+- Search commands: `grep -n 'DashboardPage' apps/web/src/App.tsx`
+
 **Acceptance criteria:**
 - [ ] `cd apps/web && npm run build` succeeds
 - [ ] `DashboardPage` accepts `empireNo` and the four `onNavigate*` callbacks
@@ -509,6 +654,8 @@ unchanged.
 - [ ] Error message renders on fetch failure
 - [ ] Existing Orders and Reports buttons are preserved below the cards
 - [ ] `App.tsx` passes all required props to `DashboardPage`
+- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [ ] New/changed API matches an existing pattern (or deviation documented)
 
 **Tests to add/update:**
 - None beyond build success.

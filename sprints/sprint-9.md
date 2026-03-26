@@ -14,8 +14,11 @@
 2. **Every task names its tests.** A task is not ready for an agent until it
    lists the exact tests to add or update.
 
-3. **No mixed concerns.** Never combine semantic translation with cleanup or
-   refactoring in the same task.
+3. **No unrelated cleanup.** Do not bundle opportunistic refactoring into a
+   feature task. Required follow-through cleanup belongs in the same task
+   when it is directly caused by the change: stale references, dead helpers,
+   guard clauses, invariant fixes, API alignment within the touched
+   subsystem, and tests.
 
 4. **Tasks must fit in context.** Each task description must be self-contained:
    an agent should be able to read the task and begin work without needing to
@@ -27,6 +30,25 @@
 
 6. **Small diffs only.** Prefer several small tasks over one large one. If a
    task will touch more than ~200 lines or more than 3 files, split it.
+
+7. **Every task must state failure paths and invariants.** If a task does
+   lookup, selection, indexing, parsing, ID allocation, or file/template
+   input, the task must define behavior for not-found / invalid / empty /
+   duplicate cases and name tests for them.
+
+8. **Every task must include an impact scan.** List the existing helpers,
+   fields, comments, call sites, and tests that may become stale because of
+   the change. Remove/update them in the same task, or explicitly say why
+   they remain.
+
+9. **New/changed APIs must match an existing pattern.** For ports, stores,
+   constructors, and method signatures, the task must cite the existing
+   pattern it follows. If it deviates, the task must briefly justify the
+   deviation.
+
+10. **Validation ownership must be explicit.** For external inputs
+    (JSON/templates/CLI/API payloads), the task must say which SOUSA layer
+    validates invariants (`domain` vs `app`) and what is validated.
 
 ---
 
@@ -127,6 +149,13 @@ cd backend && go build ./cmd/api/
 cd backend && go build ./cmd/cli/
 cd backend && go vet ./...
 ```
+
+**Audit-left guidance:**
+Audit items belong with the task that introduced the risk. SOUSA checks,
+stale-reference scans, guard/negative tests, and API-pattern checks must
+appear in the relevant task's design checklist or acceptance criteria. A
+final audit task is only a last verification step — it should confirm
+health, not discover new issues.
 
 ---
 
@@ -254,6 +283,34 @@ Apply this to: `TestAddEmpire` (all sub-tests), `TestAddEmpire_RequiresHomeWorld
 - Assert the Inventory slice is a copy, not the same slice as the template
   (modify one, verify the other is unchanged).
 
+**Design review checklist:**
+
+_SOUSA layers touched:_
+- [x] domain (reads `ColonyTemplate` type)
+- [x] app (`AddEmpire` in `game_service.go`)
+- [ ] infra
+- [ ] delivery
+- [ ] runtime
+- Allowed dependency direction: app → domain only
+
+_Existing pattern to follow:_
+- `ReadHomeworldTemplate` call pattern in `CreateHomeWorld` (same file)
+- Colony ID generation: `len(cluster.Colonies) + 1` (existing pattern)
+
+_Failure paths / guard clauses:_
+- [x] Not-found behavior specified: template read error propagates as wrapped error
+- [x] Empty/nil/invalid input behavior specified: N/A — template always has inventory
+- [ ] ID/index bounds behavior specified (N/A)
+
+_Invariants / validation:_
+- [x] Uniqueness / ID generation rule stated: `ColonyID = len(cluster.Colonies) + 1`
+- [x] Ordering or state preconditions stated: Sprint 8 must be complete
+- [x] Validation rules listed and layer assigned: `app` validates via template read error
+
+_Impact scan:_
+- Helpers/call sites/fields/comments/tests to revisit: all `TestAddEmpire_*` tests need `Templates` field added
+- Search commands: `rg 'GameService{' backend/internal/app/game_service_test.go`
+
 **Acceptance criteria:**
 - [ ] `cd backend && go build ./...` succeeds
 - [ ] `cd backend && go test ./...` passes
@@ -263,6 +320,10 @@ Apply this to: `TestAddEmpire` (all sub-tests), `TestAddEmpire_RequiresHomeWorld
 - [ ] Colony `MiningGroups`, `FarmGroups`, `FactoryGroups` are nil (not yet assigned)
 - [ ] All updated `TestAddEmpire_*` tests pass with `Templates` wired
 - [ ] `TestAddEmpire_ColonyFromTemplate` passes
+- [ ] At least one negative/guard-path test added or updated (template read error via existing tests)
+- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [ ] New/changed API matches an existing pattern (or deviation documented)
+- [ ] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - `defaultColonyTemplate()` helper — new in `game_service_test.go`
@@ -342,6 +403,34 @@ slices.SortFunc(farmUnits, func(a, b domain.GroupUnit) int {
 - Use a template with no `Farm` units.
 - Assert `colony.FarmGroups` is nil (or empty).
 
+**Design review checklist:**
+
+_SOUSA layers touched:_
+- [ ] domain
+- [x] app (`AddEmpire` in `game_service.go`)
+- [ ] infra
+- [ ] delivery
+- [ ] runtime
+- Allowed dependency direction: app → domain only
+
+_Existing pattern to follow:_
+- Inventory iteration pattern from Task 1's template copy
+- `slices.SortFunc` for ordering (Go stdlib)
+
+_Failure paths / guard clauses:_
+- [x] Not-found behavior specified: no `Farm` units → `colony.FarmGroups = nil`
+- [x] Empty/nil/invalid input behavior specified: empty inventory → no group created
+- [ ] ID/index bounds behavior specified (N/A — single group, always ID 1)
+
+_Invariants / validation:_
+- [x] Uniqueness / ID generation rule stated: single FarmGroup always has ID 1
+- [x] Ordering or state preconditions stated: farm units sorted by TechLevel ascending
+- [x] Validation rules listed and layer assigned: `app` — filter by `Unit == Farm && QuantityAssembled > 0`
+
+_Impact scan:_
+- Helpers/call sites/fields/comments/tests to revisit: None — additive to `AddEmpire`
+- Search commands: `rg 'FarmGroup' backend/internal/`
+
 **Acceptance criteria:**
 - [ ] `cd backend && go build ./...` succeeds
 - [ ] `cd backend && go test ./...` passes
@@ -352,6 +441,10 @@ slices.SortFunc(farmUnits, func(a, b domain.GroupUnit) int {
 - [ ] `colony.Inventory` is not modified by farm group creation
 - [ ] `TestAddEmpire_FarmGroup` passes
 - [ ] `TestAddEmpire_FarmGroup_NoFarms` passes
+- [ ] At least one negative/guard-path test added or updated (`TestAddEmpire_FarmGroup_NoFarms`)
+- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [ ] New/changed API matches an existing pattern (or deviation documented)
+- [ ] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - `TestAddEmpire_FarmGroup` — verifies farm group with multiple TLs
@@ -461,6 +554,34 @@ colony.MiningGroups = buildMiningGroups(colony.Inventory, hwDepositIDs)
 - Use `makeTestCluster(hwPlanetID)` (no deposits).
 - Assert `colony.MiningGroups` is nil.
 
+**Design review checklist:**
+
+_SOUSA layers touched:_
+- [ ] domain
+- [x] app (`buildMiningGroups` + `AddEmpire` in `game_service.go`)
+- [ ] infra
+- [ ] delivery
+- [ ] runtime
+- Allowed dependency direction: app → domain only
+
+_Existing pattern to follow:_
+- Farm group creation pattern from Task 2 (inventory scan, GroupUnit collection)
+- `slices.SortFunc` for TechLevel ordering
+
+_Failure paths / guard clauses:_
+- [x] Not-found behavior specified: no deposits → return nil; no Mine units → return nil
+- [x] Empty/nil/invalid input behavior specified: empty inventory or empty depositIDs → nil
+- [x] ID/index bounds behavior specified: MiningGroupID runs 1..N, one per deposit
+
+_Invariants / validation:_
+- [x] Uniqueness / ID generation rule stated: MiningGroupID = i+1, per-colony sequential
+- [x] Ordering or state preconditions stated: mine pool sorted by TechLevel ascending; greedy consumption
+- [x] Validation rules listed and layer assigned: `app` — filter `Unit == Mine && QuantityAssembled > 0`
+
+_Impact scan:_
+- Helpers/call sites/fields/comments/tests to revisit: None — additive to `AddEmpire`
+- Search commands: `rg 'MiningGroup' backend/internal/`
+
 **Acceptance criteria:**
 - [ ] `cd backend && go build ./...` succeeds
 - [ ] `cd backend && go test ./...` passes
@@ -473,6 +594,10 @@ colony.MiningGroups = buildMiningGroups(colony.Inventory, hwDepositIDs)
 - [ ] `TestBuildMiningGroups` (table-driven) passes
 - [ ] `TestAddEmpire_MiningGroups` passes
 - [ ] `TestAddEmpire_MiningGroups_NoDeposits` passes
+- [ ] At least one negative/guard-path test added or updated (`TestBuildMiningGroups` no-deposits/no-mines cases)
+- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [ ] New/changed API matches an existing pattern (or deviation documented)
+- [ ] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - `TestBuildMiningGroups` — table-driven unit test for `buildMiningGroups`

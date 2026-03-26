@@ -14,8 +14,11 @@
 2. **Every task names its tests.** A task is not ready for an agent until it
    lists the exact tests to add or update.
 
-3. **No mixed concerns.** Never combine semantic translation with cleanup or
-   refactoring in the same task.
+3. **No unrelated cleanup.** Do not bundle opportunistic refactoring into a
+   feature task. Required follow-through cleanup belongs in the same task
+   when it is directly caused by the change: stale references, dead helpers,
+   guard clauses, invariant fixes, API alignment within the touched
+   subsystem, and tests.
 
 4. **Tasks must fit in context.** Each task description must be self-contained:
    an agent should be able to read the task and begin work without needing to
@@ -27,6 +30,25 @@
 
 6. **Small diffs only.** Prefer several small tasks over one large one. If a
    task will touch more than ~200 lines or more than 3 files, split it.
+
+7. **Every task must state failure paths and invariants.** If a task does
+   lookup, selection, indexing, parsing, ID allocation, or file/template
+   input, the task must define behavior for not-found / invalid / empty /
+   duplicate cases and name tests for them.
+
+8. **Every task must include an impact scan.** List the existing helpers,
+   fields, comments, call sites, and tests that may become stale because of
+   the change. Remove/update them in the same task, or explicitly say why
+   they remain.
+
+9. **New/changed APIs must match an existing pattern.** For ports, stores,
+   constructors, and method signatures, the task must cite the existing
+   pattern it follows. If it deviates, the task must briefly justify the
+   deviation.
+
+10. **Validation ownership must be explicit.** For external inputs
+    (JSON/templates/CLI/API payloads), the task must say which SOUSA layer
+    validates invariants (`domain` vs `app`) and what is validated.
 
 ---
 
@@ -118,6 +140,13 @@ cd backend && go build ./cmd/api/
 cd backend && go vet ./...
 ```
 
+**Audit-left guidance:**
+Audit items belong with the task that introduced the risk. SOUSA checks,
+stale-reference scans, guard/negative tests, and API-pattern checks must
+appear in the relevant task's design checklist or acceptance criteria. A
+final audit task is only a last verification step — it should confirm
+health, not discover new issues.
+
 ---
 
 ## Tasks
@@ -167,10 +196,41 @@ type DashboardStore interface {
 sum of `PlanetKinds` counts, though for v0 with one colony per planet these
 are equivalent).
 
+**Design review checklist:**
+
+_SOUSA layers touched:_
+- [ ] domain
+- [x] app (new port interface and types)
+- [ ] infra
+- [ ] delivery
+- [ ] runtime
+- Allowed dependency direction: N/A — `app` types only, no imports
+
+_Existing pattern to follow:_
+- `app/template_ports.go` — port interface pattern with `Store` suffix
+- `DashboardSummary` is a flat response struct like existing app types
+
+_Failure paths / guard clauses:_
+- [ ] Not-found behavior specified (N/A — pure type definitions)
+- [ ] Empty/nil/invalid input behavior specified (N/A)
+- [ ] ID/index bounds behavior specified (N/A)
+
+_Invariants / validation:_
+- [x] Uniqueness / ID generation rule stated: N/A
+- [x] Ordering or state preconditions stated: `KindCount` slices omit zero counts, sorted by `Kind`
+- [x] Validation rules listed and layer assigned: N/A — types only
+
+_Impact scan:_
+- Helpers/call sites/fields/comments/tests to revisit: None
+- Search commands: N/A
+
 **Acceptance criteria:**
 - [ ] `cd backend && go build ./...` succeeds
 - [ ] `DashboardStore` interface exists in `app/dashboard_ports.go`
 - [ ] `DashboardSummary` and `KindCount` types exist with correct JSON tags
+- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [ ] New/changed API matches an existing pattern (or deviation documented)
+- [ ] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - None — interface and type definitions have no testable logic.
@@ -290,6 +350,34 @@ with `os.WriteFile` to keep tests independent of the write path.
 - Assert `ColonyCount == 0`, `ColonyKinds == nil` or `[]`.
 - Assert `PlanetCount == 0`, `ShipCount == 0`.
 
+**Design review checklist:**
+
+_SOUSA layers touched:_
+- [ ] domain (imported for type access only)
+- [ ] app (imports port type)
+- [x] infra (`filestore/dashboard.go` implements `DashboardStore`)
+- [ ] delivery
+- [ ] runtime
+- Allowed dependency direction: infra → app, infra → domain
+
+_Existing pattern to follow:_
+- `filestore/templates.go` — `ReadGame`/`ReadCluster` call pattern on `*Store`
+- Compile-time interface assertion: `var _ app.DashboardStore = (*Store)(nil)`
+
+_Failure paths / guard clauses:_
+- [x] Not-found behavior specified: empire not in `game.json` → `cerr.ErrNotFound` (wrapped)
+- [x] Empty/nil/invalid input behavior specified: no colonies → `ColonyCount == 0`, empty slices
+- [x] ID/index bounds behavior specified: colony/planet ID lookup → skip silently on data inconsistency
+
+_Invariants / validation:_
+- [x] Uniqueness / ID generation rule stated: N/A — read-only
+- [x] Ordering or state preconditions stated: kind slices sorted by `Kind` ascending
+- [x] Validation rules listed and layer assigned: `infra` validates empire existence; `app` defines types
+
+_Impact scan:_
+- Helpers/call sites/fields/comments/tests to revisit: None — new file
+- Search commands: `rg 'DashboardStore' backend/internal/`
+
 **Acceptance criteria:**
 - [ ] `cd backend && go build ./...` succeeds
 - [ ] `cd backend && go test ./...` passes
@@ -301,6 +389,10 @@ with `os.WriteFile` to keep tests independent of the write path.
 - [ ] Unique-planet deduplication is correct
 - [ ] `ShipCount` is always 0
 - [ ] All five tests pass
+- [ ] At least one negative/guard-path test added or updated (`TestGetDashboardSummary_EmpireNotFound`, `TestGetDashboardSummary_NoColonies`)
+- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [ ] New/changed API matches an existing pattern (or deviation documented)
+- [ ] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - `TestGetDashboardSummary_OneColony`
@@ -399,6 +491,35 @@ there — update the call site to pass `nil` or a stub for `dashboardStore`.
 Check whether `handlers_test.go` calls `AddRoutes` directly; if so, add a
 `nil` argument in the correct position.
 
+**Design review checklist:**
+
+_SOUSA layers touched:_
+- [ ] domain
+- [ ] app (imports port type)
+- [ ] infra
+- [x] delivery (`http/handlers.go`, `http/routes.go`)
+- [x] runtime (`server/server.go` wiring)
+- Allowed dependency direction: delivery → app; runtime → infra + delivery + app
+
+_Existing pattern to follow:_
+- `GetReport` handler pattern in `handlers.go` (closure returning handler func)
+- `AddRoutes` parameter pattern in `routes.go`
+- `server.go` wiring: same `fileStore` passed as multiple store interfaces
+
+_Failure paths / guard clauses:_
+- [x] Not-found behavior specified: `cerr.ErrNotFound` → HTTP 404
+- [x] Empty/nil/invalid input behavior specified: other errors → HTTP 500
+- [ ] ID/index bounds behavior specified (N/A — `EmpireFromCtx` extracts empire number)
+
+_Invariants / validation:_
+- [x] Uniqueness / ID generation rule stated: N/A — read-only endpoint
+- [x] Ordering or state preconditions stated: requires `EmpireAuthMiddleware` for auth
+- [x] Validation rules listed and layer assigned: `delivery` — auth via middleware; `infra` — empire lookup
+
+_Impact scan:_
+- Helpers/call sites/fields/comments/tests to revisit: `AddRoutes` call sites in `handlers_test.go` and `server.go`
+- Search commands: `rg 'AddRoutes' backend/internal/`
+
 **Acceptance criteria:**
 - [ ] `cd backend && go build ./...` succeeds
 - [ ] `cd backend && go test ./...` passes
@@ -409,6 +530,9 @@ Check whether `handlers_test.go` calls `AddRoutes` directly; if so, add a
 - [ ] `GetDashboard` returns 404 when empire not found
 - [ ] `GetDashboard` returns 500 on other errors
 - [ ] Any existing `AddRoutes` call sites (tests) compile after signature change
+- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [ ] New/changed API matches an existing pattern (or deviation documented)
+- [ ] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - Update `delivery/http/handlers_test.go` call sites if `AddRoutes` is
