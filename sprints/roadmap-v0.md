@@ -66,14 +66,82 @@ This document lists the features required to ship v0. It is not a sprint plan �
 
 ## MVP Order Set
 
-> **Status:** TBD — define before writing sprint 12.
-
 The MVP order set is the minimum subset of orders needed for a playable game loop: submit orders → process turn → receive report → repeat. Orders not in the MVP set are rejected at parse time with a clear "not yet implemented" error.
 
-Candidates (to be confirmed):
+The design doc (to be written before sprint 12) should cover: order text syntax, the `domain.Order` type hierarchy, parse-time vs. execution-time validation, and the turn phase each order maps to.
 
-| Order | Purpose | Notes |
-|-------|---------|-------|
-| *TBD* | *TBD* | *TBD* |
+### Turn phases (1978 Sequence of Play)
 
-The order set must be defined before speccing the order-parsing sprint. The design doc should cover: order text syntax, the `domain.Order` type hierarchy, parse-time vs. execution-time validation, and the turn phase each order maps to.
+| # | Phase | Description |
+|---|-------|-------------|
+| 1 | Mining/farming production | Calculate resource and food output |
+| 2 | Manufacturing production | Calculate factory output |
+| 3 | Combat | Resolve bombard, invade, raid, support |
+| 4 | Set up | Create new ships/colonies |
+| 5 | Disassembly | Disassemble units |
+| 6 | Build change | Reassign factory production targets |
+| 7 | Mining change | Reassign mining groups to deposits |
+| 8 | Transfers | Move units between ships/colonies |
+| 9 | Assembly | Assemble units (factories, mines, etc.) |
+| 10 | Market/trade | Buy/sell on market planets and trade stations |
+| 11 | Surveys | Survey local system |
+| 12 | Probes/sensors | Compile probe and sensor reports |
+| 13 | Espionage | Spy operations |
+| 14 | Ship movement | Execute jump orders |
+| 15 | Draft | Draft population into specialist roles |
+| 16 | Pay/ration | Set wages and food rations |
+| 17 | Rebellion | Resolve rebellions |
+| 18 | Rebel increases | Calculate rebel growth |
+| 19 | Naming/control | Process name and control orders |
+| 20 | Population | Calculate population growth |
+| 21 | News | Compile news service reports |
+
+### Order table
+
+"MVP" = must work end-to-end in v0. "Stub" = phase exists but order is rejected as not-yet-implemented. "Auto" = no player order; the phase runs automatically.
+
+| Category | Order | Phase | MVP | Notes |
+|----------|-------|-------|-----|-------|
+| **Production** | *(none — automatic)* | 1, 2 | Auto | Mining, farming, and factory output computed automatically each turn |
+| **Combat** | Bombard | 3 | Stub | |
+| **Combat** | Invade | 3 | Stub | |
+| **Combat** | Raid | 3 | Stub | |
+| **Combat** | Support attacker | 3 | Stub | |
+| **Combat** | Support defender | 3 | Stub | |
+| **Setup** | Set up (ship/colony) | 4 | **MVP** | Create new ships and colonies |
+| **Assembly** | Disassemble | 5 | Stub | |
+| **Assembly** | Build change | 6 | Stub | Reassign factory group output |
+| **Assembly** | Mining change | 7 | Stub | Reassign mining group to new deposit |
+| **Transfer** | Transfer | 8 | Stub | |
+| **Assembly** | Assemble (factory) | 9 | Stub | |
+| **Assembly** | Assemble (mine) | 9 | Stub | |
+| **Assembly** | Assemble (other) | 9 | Stub | |
+| **Market** | Buy | 10 | Stub | |
+| **Market** | Sell | 10 | Stub | |
+| **Recon** | Survey | 11 | Stub | |
+| **Recon** | Probe | 12 | Stub | |
+| **Espionage** | Check rebels | 13 | Stub | |
+| **Espionage** | Convert rebels | 13 | Stub | |
+| **Espionage** | Incite rebels | 13 | Stub | |
+| **Espionage** | Check for spies | 13 | Stub | |
+| **Espionage** | Attack spies | 13 | Stub | |
+| **Espionage** | Gather information | 13 | Stub | |
+| **Movement** | Move (in-system) | 14 | **MVP** | Jump to another orbit in same system |
+| **Movement** | Move (system jump) | 14 | **MVP** | Jump to another star system |
+| **Draft** | Draft | 15 | Stub | |
+| **Draft** | Disband | 15 | Stub | |
+| **Pay/Ration** | Pay | 16 | **MVP** | Set wages by population type |
+| **Pay/Ration** | Ration | 16 | **MVP** | Set food ration percentage |
+| **Population** | *(none — automatic)* | 17, 18, 20 | Auto | Rebellion, rebel growth, and population growth computed automatically |
+| **Admin** | Name (planet) | 19 | **MVP** | |
+| **Admin** | Name (ship/colony) | 19 | **MVP** | |
+| **Admin** | Control | 19 | Stub | Claim control of a location |
+| **Admin** | Un-control | 19 | Stub | Release control of a location |
+| **Diplomacy** | Permission (trade station) | 10 | Stub | |
+| **Diplomacy** | Permission to colonize | 19 | Stub | |
+| **Comms** | News (market planet) | 21 | Stub | |
+| **Comms** | News (trade station) | 21 | Stub | |
+
+### MVP rationale
+
+The MVP set (setup, jump, pay, ration, naming) gives players the core loop: manage colony economics (pay/ration), move ships, establish new ships/colonies, and label things. All 21 turn phases must exist in the pipeline — non-MVP phases either run automatically (production, population, rebellion) or accept no orders and produce no effect (combat, market, espionage, etc.).
