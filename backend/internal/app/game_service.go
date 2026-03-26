@@ -112,9 +112,15 @@ func (s *GameService) AddEmpire(dirPath string, empireNo int, name string, homeW
 		}
 	}
 
-	// Create starting colony
+	// Create starting colony (use max existing ID + 1 to avoid duplicates if colonies are ever deleted)
+	maxColonyID := 0
+	for _, c := range cluster.Colonies {
+		if int(c.ID) > maxColonyID {
+			maxColonyID = int(c.ID)
+		}
+	}
 	colony := domain.Colony{
-		ID:        domain.ColonyID(len(cluster.Colonies) + 1),
+		ID:        domain.ColonyID(maxColonyID + 1),
 		Empire:    domain.EmpireID(empireNo),
 		Planet:    homeWorldID,
 		TechLevel: 1,
@@ -304,6 +310,23 @@ func (s *GameService) CreateHomeWorld(dataPath string, planetID domain.PlanetID,
 	if err != nil {
 		return 0, fmt.Errorf("createHomeWorld: %w", err)
 	}
+	if tmpl.Habitability < 0 || tmpl.Habitability > 100 {
+		return 0, fmt.Errorf("createHomeWorld: invalid template habitability %d (must be 0–100)", tmpl.Habitability)
+	}
+	if len(tmpl.Deposits) == 0 {
+		return 0, fmt.Errorf("createHomeWorld: template has no deposits")
+	}
+	for i, dt := range tmpl.Deposits {
+		if dt.Resource < domain.GOLD || dt.Resource > domain.NONMETALLICS {
+			return 0, fmt.Errorf("createHomeWorld: template deposit %d has invalid resource %d", i, dt.Resource)
+		}
+		if dt.YieldPct < 0 || dt.YieldPct > 100 {
+			return 0, fmt.Errorf("createHomeWorld: template deposit %d has invalid yield %d%% (must be 0–100)", i, dt.YieldPct)
+		}
+		if dt.QuantityRemaining < 0 {
+			return 0, fmt.Errorf("createHomeWorld: template deposit %d has negative quantity", i)
+		}
+	}
 
 	// Find max deposit ID across all existing deposits
 	maxDepositID := 0
@@ -320,6 +343,9 @@ func (s *GameService) CreateHomeWorld(dataPath string, planetID domain.PlanetID,
 			planetIdx = i
 			break
 		}
+	}
+	if planetIdx == -1 {
+		return 0, fmt.Errorf("createHomeWorld: planet %d not found in cluster", planetID)
 	}
 
 	// Remove old deposits for this planet
