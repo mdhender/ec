@@ -302,6 +302,13 @@ that breaks.
 - [ ] `findSystemForPlanet` still exists (used by `CreateHomeWorld`)
 - [ ] Ordering invariant comment is present above the race lookup
 
+**Pre-flight check (agent must do before editing):**
+```bash
+grep -r "\.Location" backend/internal/ | grep -i colony
+```
+If any references to `Colony.Location` exist outside `domain/cluster.go`,
+fix them in this task before proceeding.
+
 **Tests to add/update:**
 - No test changes needed — existing tests do not construct `Colony` directly
   and `AddEmpire` tests do not assert on `colony.Location`. Verify
@@ -501,6 +508,7 @@ a. Load template:
 
 b. Find the planet's current max deposit ID across the whole cluster
    (walk cluster.Deposits, track max int(d.ID)).
+   If cluster.Deposits is empty, maxDepositID starts at 0.
 
 c. Find the planet by index in cluster.Planets (loop by ID, not slice index).
    On the planet:

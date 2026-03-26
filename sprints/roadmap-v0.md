@@ -46,6 +46,7 @@ This document lists the features required to ship v0. It is not a sprint plan �
 ## Persistence
 
 - File-backed store for cluster, game state, orders, and reports (in use — evolving through sprints)
+- **Sequence counters in game file** — add max sequence numbers for deposits, colonies, ships, etc. to `game.json` so ID generation does not rely on `len(slice) + 1`, which breaks if records are ever deleted.
 - **SQLite persistence layer** — replace the file-backed store with a SQLite database using `modernc.org/sqlite` (CGo-free) and `zombiezen.com/go/sqlite` (query interface). File store serves as the import source once the models stabilize.
 
 ---

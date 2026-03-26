@@ -94,8 +94,9 @@ adds it as a third store argument, `dashboardStore`.
   `string` and `int`).
 - `infra/filestore/dashboard.go` — implements the port; may import `domain`
   and Go stdlib only.
-- `delivery/http/handlers.go` — new handler; imports `app` port only, not
-  `infra` or `domain` directly.
+- `delivery/http/handlers.go` — new handler; imports `app` and `cerr` only,
+  not `infra` or `domain` directly. Verify that `EmpireFromCtx` does not
+  require a `domain` import in this file.
 - `runtime/server/server.go` — the only file that imports `infra` and wires
   concrete types.
 
