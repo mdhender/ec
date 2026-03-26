@@ -112,7 +112,7 @@ The design doc (to be written before sprint 12) should cover: order text syntax,
 | **Assembly** | Disassemble | 5 | Stub | |
 | **Assembly** | Build change | 6 | Stub | Reassign factory group output |
 | **Assembly** | Mining change | 7 | Stub | Reassign mining group to new deposit |
-| **Transfer** | Transfer | 8 | Stub | |
+| **Transfer** | Transfer | 8 | **MVP** | Move units between ships/colonies at same location |
 | **Assembly** | Assemble (factory) | 9 | Stub | |
 | **Assembly** | Assemble (mine) | 9 | Stub | |
 | **Assembly** | Assemble (other) | 9 | Stub | |
@@ -144,4 +144,4 @@ The design doc (to be written before sprint 12) should cover: order text syntax,
 
 ### MVP rationale
 
-The MVP set (setup, jump, pay, ration, naming) gives players the core loop: manage colony economics (pay/ration), move ships, establish new ships/colonies, and label things. All 21 turn phases must exist in the pipeline — non-MVP phases either run automatically (production, population, rebellion) or accept no orders and produce no effect (combat, market, espionage, etc.).
+The MVP set (setup, transfer, jump, pay, ration, naming) gives players the core loop: manage colony economics (pay/ration), move ships, transfer units between ships and colonies, establish new ships/colonies, and label things. All 21 turn phases must exist in the pipeline — non-MVP phases either run automatically (production, population, rebellion) or accept no orders and produce no effect (combat, market, espionage, etc.).
