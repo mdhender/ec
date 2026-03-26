@@ -6,6 +6,7 @@ import (
 	cryptorand "crypto/rand"
 	"fmt"
 	mathrand "math/rand/v2"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -55,6 +56,10 @@ func (s *GameService) AddEmpire(dirPath string, empireNo int, name string, homeW
 		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
 	cluster, err := s.Cluster.ReadCluster(dirPath)
+	if err != nil {
+		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
+	}
+	colonyTmpl, err := s.Templates.ReadColonyTemplate(dirPath)
 	if err != nil {
 		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
 	}
@@ -119,12 +124,50 @@ func (s *GameService) AddEmpire(dirPath string, empireNo int, name string, homeW
 			maxColonyID = int(c.ID)
 		}
 	}
+
+	// Deep-copy inventory from template so each empire gets independent slices.
+	inventory := make([]domain.Inventory, len(colonyTmpl.Inventory))
+	copy(inventory, colonyTmpl.Inventory)
+
 	colony := domain.Colony{
 		ID:        domain.ColonyID(maxColonyID + 1),
 		Empire:    domain.EmpireID(empireNo),
 		Planet:    homeWorldID,
-		TechLevel: 1,
+		Kind:      colonyTmpl.Kind,
+		TechLevel: colonyTmpl.TechLevel,
+		Inventory: inventory,
 	}
+
+	// Build farm group from assembled Farm units in the colony inventory.
+	// Each colony has at most one FarmGroup; sub-groups are by tech level.
+	var farmUnits []domain.GroupUnit
+	for _, inv := range colony.Inventory {
+		if inv.Unit == domain.Farm && inv.QuantityAssembled > 0 {
+			farmUnits = append(farmUnits, domain.GroupUnit{
+				TechLevel: inv.TechLevel,
+				Quantity:  inv.QuantityAssembled,
+			})
+		}
+	}
+	slices.SortFunc(farmUnits, func(a, b domain.GroupUnit) int {
+		return int(a.TechLevel) - int(b.TechLevel)
+	})
+	if len(farmUnits) > 0 {
+		colony.FarmGroups = []domain.FarmGroup{
+			{ID: 1, Units: farmUnits},
+		}
+	}
+
+	// Build mining groups — one per deposit, Mine units split evenly.
+	var hwDepositIDs []domain.DepositID
+	for _, p := range cluster.Planets {
+		if p.ID == homeWorldID {
+			hwDepositIDs = p.Deposits
+			break
+		}
+	}
+	colony.MiningGroups = buildMiningGroups(colony.Inventory, hwDepositIDs)
+
 	cluster.Colonies = append(cluster.Colonies, colony)
 
 	// Create empire
@@ -439,6 +482,85 @@ func scrubEmpireName(name string) string {
 	// Compress runs of spaces
 	parts := strings.Fields(b.String())
 	return strings.TrimSpace(strings.Join(parts, " "))
+}
+
+// buildMiningGroups creates one MiningGroup per deposit, distributing
+// assembled Mine units as evenly as possible. Remainder units are
+// assigned round-robin. Sub-groups within each group are by tech level.
+// The returned slice is nil if depositIDs is empty or there are no Mine units.
+//
+// Note: this is intentionally the simplest assignment that could possibly
+// work. Future sprints will rework the algorithm.
+func buildMiningGroups(inventory []domain.Inventory, depositIDs []domain.DepositID) []domain.MiningGroup {
+	type mineEntry struct {
+		TechLevel domain.TechLevel
+		Quantity  int
+	}
+	var pool []mineEntry
+	for _, inv := range inventory {
+		if inv.Unit == domain.Mine && inv.QuantityAssembled > 0 {
+			pool = append(pool, mineEntry{inv.TechLevel, inv.QuantityAssembled})
+		}
+	}
+	if len(depositIDs) == 0 || len(pool) == 0 {
+		return nil
+	}
+	slices.SortFunc(pool, func(a, b mineEntry) int {
+		return int(a.TechLevel) - int(b.TechLevel)
+	})
+
+	total := 0
+	for _, e := range pool {
+		total += e.Quantity
+	}
+	n := len(depositIDs)
+	base := total / n
+	remainder := total % n
+
+	var groups []domain.MiningGroup
+	poolIdx := 0
+	poolRemaining := pool[0].Quantity
+
+	for i, depositID := range depositIDs {
+		groupQty := base
+		if i < remainder {
+			groupQty = base + 1
+		}
+		if groupQty == 0 {
+			groups = append(groups, domain.MiningGroup{
+				ID:      domain.MiningGroupID(i + 1),
+				Deposit: depositID,
+			})
+			continue
+		}
+
+		var units []domain.GroupUnit
+		remaining := groupQty
+		for remaining > 0 && poolIdx < len(pool) {
+			take := remaining
+			if take > poolRemaining {
+				take = poolRemaining
+			}
+			units = append(units, domain.GroupUnit{
+				TechLevel: pool[poolIdx].TechLevel,
+				Quantity:  take,
+			})
+			remaining -= take
+			poolRemaining -= take
+			if poolRemaining == 0 {
+				poolIdx++
+				if poolIdx < len(pool) {
+					poolRemaining = pool[poolIdx].Quantity
+				}
+			}
+		}
+		groups = append(groups, domain.MiningGroup{
+			ID:      domain.MiningGroupID(i + 1),
+			Deposit: depositID,
+			Units:   units,
+		})
+	}
+	return groups
 }
 
 // newUUID generates a random v4 UUID using crypto/rand.
