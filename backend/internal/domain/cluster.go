@@ -89,6 +89,27 @@ func (k PlanetKind) String() string {
 	}
 }
 
+type ColonyKind int
+
+const (
+	OpenAir  ColonyKind = iota + 1
+	Orbital
+	Enclosed
+)
+
+func (k ColonyKind) String() string {
+	switch k {
+	case OpenAir:
+		return "Open Air"
+	case Orbital:
+		return "Orbital"
+	case Enclosed:
+		return "Enclosed"
+	default:
+		return "Unknown"
+	}
+}
+
 type DepositID int
 
 type Deposit struct {
@@ -127,10 +148,15 @@ type TechLevel int
 type ColonyID int
 
 type Colony struct {
-	ID        ColonyID
-	Empire    EmpireID
-	Location  Coords
-	TechLevel TechLevel
+	ID            ColonyID
+	Empire        EmpireID
+	Planet        PlanetID
+	Kind          ColonyKind
+	TechLevel     TechLevel
+	Inventory     []Inventory
+	MiningGroups  []MiningGroup
+	FarmGroups    []FarmGroup
+	FactoryGroups []FactoryGroup
 }
 
 type ShipID int
@@ -187,7 +213,39 @@ const (
 )
 
 type Inventory struct {
-	Unit              UnitKind
-	TechLevel         TechLevel
-	QuantityAssembled int
+	Unit                 UnitKind
+	TechLevel            TechLevel
+	QuantityAssembled    int
+	QuantityDisassembled int
+}
+
+// GroupUnit is a sub-group of a colony or ship group, representing
+// all units of the same tech level assigned to that group.
+type GroupUnit struct {
+	TechLevel TechLevel
+	Quantity  int
+}
+
+type MiningGroupID int
+
+type MiningGroup struct {
+	ID      MiningGroupID
+	Deposit DepositID
+	Units   []GroupUnit
+}
+
+type FarmGroupID int
+
+// FarmGroup represents all farming units on a colony.
+// Each colony has at most one FarmGroup; sub-groups are by tech level.
+type FarmGroup struct {
+	ID    FarmGroupID
+	Units []GroupUnit
+}
+
+type FactoryGroupID int
+
+type FactoryGroup struct {
+	ID    FactoryGroupID
+	Units []GroupUnit
 }

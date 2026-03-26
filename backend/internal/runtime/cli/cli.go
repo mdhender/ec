@@ -19,8 +19,9 @@ func BuildCommands() []*ff.Command {
 	}
 
 	gameSvc := &app.GameService{
-		Store:   store,
-		Cluster: store,
+		Store:     store,
+		Cluster:   store,
+		Templates: store,
 	}
 
 	createCmd := &ff.Command{

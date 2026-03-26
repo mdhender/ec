@@ -217,12 +217,12 @@ removed or renamed, so no existing code breaks.
    ```
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes
-- [ ] `Inventory` has `QuantityDisassembled int`
-- [ ] `ColonyKind` type exists with `OpenAir`, `Orbital`, `Enclosed` constants
-- [ ] `MiningGroup`, `FarmGroup`, `FactoryGroup`, `GroupUnit` types exist
-- [ ] All existing tests still pass (additive change only)
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes
+- [x] `Inventory` has `QuantityDisassembled int`
+- [x] `ColonyKind` type exists with `OpenAir`, `Orbital`, `Enclosed` constants
+- [x] `MiningGroup`, `FarmGroup`, `FactoryGroup`, `GroupUnit` types exist
+- [x] All existing tests still pass (additive change only)
 
 **Tests to add/update:**
 - None — pure additive type definitions with no logic.
@@ -294,13 +294,13 @@ that breaks.
    `CreateHomeWorld`.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes
-- [ ] `Colony` has `Planet PlanetID`; `Location Coords` does not exist
-- [ ] `Colony` has `Kind`, `TechLevel`, `Inventory`, `MiningGroups`, `FarmGroups`, `FactoryGroups` fields
-- [ ] `AddEmpire` sets `colony.Planet = homeWorldID`
-- [ ] `findSystemForPlanet` still exists (used by `CreateHomeWorld`)
-- [ ] Ordering invariant comment is present above the race lookup
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes
+- [x] `Colony` has `Planet PlanetID`; `Location Coords` does not exist
+- [x] `Colony` has `Kind`, `TechLevel`, `Inventory`, `MiningGroups`, `FarmGroups`, `FactoryGroups` fields
+- [x] `AddEmpire` sets `colony.Planet = homeWorldID`
+- [x] `findSystemForPlanet` still exists (used by `CreateHomeWorld`)
+- [x] Ordering invariant comment is present above the race lookup
 
 **Pre-flight check (agent must do before editing):**
 ```bash
@@ -359,10 +359,10 @@ type ColonyTemplate struct {
 ```
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `domain.HomeworldTemplate`, `domain.ColonyTemplate`, `domain.DepositTemplate` exist
-- [ ] `HomeworldTemplate` has `Habitability int` and `Deposits []DepositTemplate`
-- [ ] `ColonyTemplate` has `Kind ColonyKind`, `TechLevel TechLevel`, `Inventory []Inventory`
+- [x] `cd backend && go build ./...` succeeds
+- [x] `domain.HomeworldTemplate`, `domain.ColonyTemplate`, `domain.DepositTemplate` exist
+- [x] `HomeworldTemplate` has `Habitability int` and `Deposits []DepositTemplate`
+- [x] `ColonyTemplate` has `Kind ColonyKind`, `TechLevel TechLevel`, `Inventory []Inventory`
 
 **Tests to add/update:**
 - None — pure type definitions with no logic.
@@ -400,9 +400,9 @@ type TemplateStore interface {
 ```
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `TemplateStore` interface exists in `app/template_ports.go`
-- [ ] Interface has `ReadHomeworldTemplate` and `ReadColonyTemplate` methods
+- [x] `cd backend && go build ./...` succeeds
+- [x] `TemplateStore` interface exists in `app/template_ports.go`
+- [x] Interface has `ReadHomeworldTemplate` and `ReadColonyTemplate` methods
 
 **Tests to add/update:**
 - None — interface definitions have no testable logic.
@@ -457,13 +457,13 @@ Both read fixed filenames from `dataPath` and unmarshal JSON.
      `ReadColonyTemplate`, assert all fields match.
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes
-- [ ] `filestore.Store` satisfies `app.TemplateStore` (compile-time assertion)
-- [ ] `ReadHomeworldTemplate` reads `<dataPath>/homeworld-template.json`
-- [ ] `ReadColonyTemplate` reads `<dataPath>/colony-template.json`
-- [ ] Both return a clear error when the file does not exist
-- [ ] `TestReadHomeworldTemplate` and `TestReadColonyTemplate` pass
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes
+- [x] `filestore.Store` satisfies `app.TemplateStore` (compile-time assertion)
+- [x] `ReadHomeworldTemplate` reads `<dataPath>/homeworld-template.json`
+- [x] `ReadColonyTemplate` reads `<dataPath>/colony-template.json`
+- [x] Both return a clear error when the file does not exist
+- [x] `TestReadHomeworldTemplate` and `TestReadColonyTemplate` pass
 
 **Tests to add/update:**
 - `TestReadHomeworldTemplate` in `backend/internal/infra/filestore/templates_test.go`
@@ -600,17 +600,17 @@ Set `mockTemplateStore.forceErr` to a non-nil error. Call `CreateHomeWorld`.
 Assert it returns an error (template read failure propagates).
 
 **Acceptance criteria:**
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes
-- [ ] `GameService` has a `Templates TemplateStore` field
-- [ ] `CreateHomeWorld` reads the homeworld template via `s.Templates`
-- [ ] Habitability is set from the template, not hardcoded
-- [ ] Existing deposits on the planet are deleted before applying the template
-- [ ] New deposits get fresh global `DepositID`s (> any existing deposit ID)
-- [ ] `runtime/cli/cli.go` passes `Templates: store` to `GameService`
-- [ ] `TestCreateHomeWorld_AppliesTemplate` passes
-- [ ] `TestCreateHomeWorld_TemplateError` passes
-- [ ] All previously passing `TestCreateHomeWorld_*` tests still pass
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes
+- [x] `GameService` has a `Templates TemplateStore` field
+- [x] `CreateHomeWorld` reads the homeworld template via `s.Templates`
+- [x] Habitability is set from the template, not hardcoded
+- [x] Existing deposits on the planet are deleted before applying the template
+- [x] New deposits get fresh global `DepositID`s (> any existing deposit ID)
+- [x] `runtime/cli/cli.go` passes `Templates: store` to `GameService`
+- [x] `TestCreateHomeWorld_AppliesTemplate` passes
+- [x] `TestCreateHomeWorld_TemplateError` passes
+- [x] All previously passing `TestCreateHomeWorld_*` tests still pass
 
 **Tests to add/update:**
 - `mockTemplateStore` + `defaultHomeworldTemplate()` — new helpers in `game_service_test.go`
@@ -664,12 +664,12 @@ Assert it returns an error (template read failure propagates).
    ```
 
 **Acceptance criteria:**
-- [ ] No SOUSA import violations
-- [ ] No `Colony.Location` references remain
-- [ ] Ordering invariant comment is present in `AddEmpire`
-- [ ] `cd backend && go vet ./...` passes
-- [ ] `cd backend && go build ./...` succeeds
-- [ ] `cd backend && go test ./...` passes
+- [x] No SOUSA import violations
+- [x] No `Colony.Location` references remain
+- [x] Ordering invariant comment is present in `AddEmpire`
+- [x] `cd backend && go vet ./...` passes
+- [x] `cd backend && go build ./...` succeeds
+- [x] `cd backend && go test ./...` passes
 
 **Tests to add/update:**
 - None — audit task only.
@@ -680,10 +680,10 @@ Assert it returns an error (template read failure propagates).
 
 | Task | Title                                                  | Status | Depends On | Agent/Thread | Notes |
 |------|--------------------------------------------------------|--------|------------|--------------|-------|
-| 1    | Domain: additive type additions                        | TODO   | —          |              |       |
-| 2    | Domain: update Colony + fix AddEmpire                  | TODO   | 1          |              |       |
-| 3    | Domain: template types                                 | TODO   | 1          |              |       |
-| 4    | App: TemplateStore port interface                      | TODO   | 3          |              |       |
-| 5    | Filestore: implement template readers                  | TODO   | 3, 4       |              |       |
-| 6    | Update CreateHomeWorld + runtime wiring                | TODO   | 2, 4, 5    |              |       |
-| 7    | Audit, build, and full test suite                      | TODO   | 1–6        |              |       |
+| 1    | Domain: additive type additions                        | DONE   | —          |              |       |
+| 2    | Domain: update Colony + fix AddEmpire                  | DONE   | 1          |              |       |
+| 3    | Domain: template types                                 | DONE   | 1          |              |       |
+| 4    | App: TemplateStore port interface                      | DONE   | 3          |              |       |
+| 5    | Filestore: implement template readers                  | DONE   | 3, 4       |              |       |
+| 6    | Update CreateHomeWorld + runtime wiring                | DONE   | 2, 4, 5    |              |       |
+| 7    | Audit, build, and full test suite                      | DONE   | 1–6        |              |       |

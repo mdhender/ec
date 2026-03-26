@@ -521,6 +521,36 @@ func TestRemoveEmpire(t *testing.T) {
 	})
 }
 
+// mockTemplateStore is an in-memory TemplateStore for testing.
+type mockTemplateStore struct {
+	homeworldTemplate domain.HomeworldTemplate
+	colonyTemplate    domain.ColonyTemplate
+	forceErr          error
+}
+
+func (m *mockTemplateStore) ReadHomeworldTemplate(dataPath string) (domain.HomeworldTemplate, error) {
+	if m.forceErr != nil {
+		return domain.HomeworldTemplate{}, m.forceErr
+	}
+	return m.homeworldTemplate, nil
+}
+
+func (m *mockTemplateStore) ReadColonyTemplate(dataPath string) (domain.ColonyTemplate, error) {
+	if m.forceErr != nil {
+		return domain.ColonyTemplate{}, m.forceErr
+	}
+	return m.colonyTemplate, nil
+}
+
+func defaultHomeworldTemplate() domain.HomeworldTemplate {
+	return domain.HomeworldTemplate{
+		Habitability: 25,
+		Deposits: []domain.DepositTemplate{
+			{Resource: domain.FUEL, YieldPct: 50, QuantityRemaining: 100},
+		},
+	}
+}
+
 // --- TestCreateHomeWorld ---
 
 func makeRichCluster() domain.Cluster {
@@ -548,7 +578,7 @@ func TestCreateHomeWorld_AutoSelect(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{homeworldTemplate: defaultHomeworldTemplate()}}
 	store.games[dir] = domain.Game{}
 	clusterStore.clusters[dir] = makeRichCluster()
 
@@ -572,7 +602,7 @@ func TestCreateHomeWorld_PlanetFlag(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{homeworldTemplate: defaultHomeworldTemplate()}}
 	store.games[dir] = domain.Game{}
 	clusterStore.clusters[dir] = makeRichCluster()
 
@@ -590,7 +620,7 @@ func TestCreateHomeWorld_PlanetFlagSkipsDistance(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{homeworldTemplate: defaultHomeworldTemplate()}}
 	// Planet 3 is at system 3 (distance 1 from system 1), which would fail minDistance=3
 	store.games[dir] = domain.Game{
 		Races: []domain.Race{{ID: 1, HomeWorld: 1}},
@@ -611,7 +641,7 @@ func TestCreateHomeWorld_PlanetNotFound(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{homeworldTemplate: defaultHomeworldTemplate()}}
 	store.games[dir] = domain.Game{}
 	clusterStore.clusters[dir] = makeRichCluster()
 
@@ -624,7 +654,7 @@ func TestCreateHomeWorld_NotTerrestrial(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{homeworldTemplate: defaultHomeworldTemplate()}}
 	store.games[dir] = domain.Game{}
 	c := makeRichCluster()
 	c.Planets[0].Kind = domain.GasGiant // planet ID 1 is now a gas giant
@@ -639,7 +669,7 @@ func TestCreateHomeWorld_AlreadyHomeWorld(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{homeworldTemplate: defaultHomeworldTemplate()}}
 	store.games[dir] = domain.Game{
 		Races: []domain.Race{{ID: 1, HomeWorld: 1}},
 	}
@@ -659,7 +689,7 @@ func TestCreateHomeWorld_MinDistance(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{homeworldTemplate: defaultHomeworldTemplate()}}
 	store.games[dir] = domain.Game{
 		Races: []domain.Race{{ID: 1, HomeWorld: 1}},
 	}
@@ -681,7 +711,7 @@ func TestCreateHomeWorld_NoTerrestrials(t *testing.T) {
 	const dir = "/test/dir"
 	store := newMockStore()
 	clusterStore := newMockClusterStore()
-	svc := &app.GameService{Store: store, Cluster: clusterStore}
+	svc := &app.GameService{Store: store, Cluster: clusterStore, Templates: &mockTemplateStore{homeworldTemplate: defaultHomeworldTemplate()}}
 	store.games[dir] = domain.Game{}
 	c := makeRichCluster()
 	// Make all planets non-terrestrial
@@ -692,5 +722,101 @@ func TestCreateHomeWorld_NoTerrestrials(t *testing.T) {
 
 	if _, err := svc.CreateHomeWorld(dir, 0, 0); err == nil {
 		t.Fatal("expected error when no terrestrials available, got nil")
+	}
+}
+
+func TestCreateHomeWorld_AppliesTemplate(t *testing.T) {
+	const dir = "/test/dir"
+	store := newMockStore()
+	clusterStore := newMockClusterStore()
+
+	tmpl := domain.HomeworldTemplate{
+		Habitability: 30,
+		Deposits: []domain.DepositTemplate{
+			{Resource: domain.METALLICS, YieldPct: 60, QuantityRemaining: 500},
+			{Resource: domain.NONMETALLICS, YieldPct: 40, QuantityRemaining: 300},
+		},
+	}
+	svc := &app.GameService{
+		Store:     store,
+		Cluster:   clusterStore,
+		Templates: &mockTemplateStore{homeworldTemplate: tmpl},
+	}
+
+	// Planet 1 with two pre-existing deposits (IDs 10, 11)
+	cluster := domain.Cluster{
+		Systems: []domain.System{{ID: 1, Location: domain.Coords{X: 0, Y: 0, Z: 0}}},
+		Stars:   []domain.Star{{ID: 1, System: 1, Orbits: [10]domain.PlanetID{1}}},
+		Planets: []domain.Planet{
+			{ID: 1, Kind: domain.Terrestrial, Habitability: 0, Deposits: []domain.DepositID{10, 11}},
+		},
+		Deposits: []domain.Deposit{
+			{ID: 10, Resource: domain.GOLD, YieldPct: 10, QuantityRemaining: 50},
+			{ID: 11, Resource: domain.FUEL, YieldPct: 20, QuantityRemaining: 75},
+		},
+	}
+	store.games[dir] = domain.Game{}
+	clusterStore.clusters[dir] = cluster
+
+	_, err := svc.CreateHomeWorld(dir, 1, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	saved := clusterStore.clusters[dir]
+
+	// Find planet 1
+	var p domain.Planet
+	for _, pl := range saved.Planets {
+		if pl.ID == 1 {
+			p = pl
+			break
+		}
+	}
+
+	if p.Habitability != 30 {
+		t.Errorf("Habitability: got %d, want 30", p.Habitability)
+	}
+	if len(p.Deposits) != 2 {
+		t.Fatalf("planet.Deposits length: got %d, want 2", len(p.Deposits))
+	}
+	// New deposit IDs must be greater than the old max (11)
+	for _, did := range p.Deposits {
+		if int(did) <= 11 {
+			t.Errorf("expected new deposit ID > 11, got %d", did)
+		}
+	}
+	// Old deposit records (IDs 10, 11) must be gone
+	for _, d := range saved.Deposits {
+		if d.ID == 10 || d.ID == 11 {
+			t.Errorf("expected old deposit ID %d to be removed, but it still exists", d.ID)
+		}
+	}
+	// New deposits must match template
+	if len(saved.Deposits) != 2 {
+		t.Fatalf("cluster.Deposits length: got %d, want 2", len(saved.Deposits))
+	}
+	if saved.Deposits[0].Resource != domain.METALLICS || saved.Deposits[0].YieldPct != 60 {
+		t.Errorf("first deposit: got %v %d%%, want METALLICS 60%%", saved.Deposits[0].Resource, saved.Deposits[0].YieldPct)
+	}
+	if saved.Deposits[1].Resource != domain.NONMETALLICS || saved.Deposits[1].YieldPct != 40 {
+		t.Errorf("second deposit: got %v %d%%, want NONMETALLICS 40%%", saved.Deposits[1].Resource, saved.Deposits[1].YieldPct)
+	}
+}
+
+func TestCreateHomeWorld_TemplateError(t *testing.T) {
+	const dir = "/test/dir"
+	store := newMockStore()
+	clusterStore := newMockClusterStore()
+	svc := &app.GameService{
+		Store:     store,
+		Cluster:   clusterStore,
+		Templates: &mockTemplateStore{forceErr: errors.New("template read failure")},
+	}
+	store.games[dir] = domain.Game{}
+	clusterStore.clusters[dir] = makeRichCluster()
+
+	if _, err := svc.CreateHomeWorld(dir, 1, 0); err == nil {
+		t.Fatal("expected error when template read fails, got nil")
 	}
 }

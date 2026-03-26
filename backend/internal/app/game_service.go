@@ -14,8 +14,9 @@ import (
 
 // GameService orchestrates game and auth config use cases.
 type GameService struct {
-	Store   GameStore
-	Cluster ClusterStore
+	Store     GameStore
+	Cluster   ClusterStore
+	Templates TemplateStore
 }
 
 // CreateGame initializes an empty game.json and auth.json in dirPath.
@@ -66,7 +67,10 @@ func (s *GameService) AddEmpire(dirPath string, empireNo int, name string, homeW
 		return 0, "", "", fmt.Errorf("addEmpire: no active homeworld; use --homeworld or run create homeworld first")
 	}
 
-	// Find the race for this homeworld
+	// Ordering invariant: CreateHomeWorld must have been called for this
+	// planet before AddEmpire can assign empires to it. The race lookup
+	// below enforces this — if no Race exists with HomeWorld == homeWorldID,
+	// the operation fails.
 	raceIdx := -1
 	for i, r := range game.Races {
 		if r.HomeWorld == homeWorldID {
@@ -108,17 +112,11 @@ func (s *GameService) AddEmpire(dirPath string, empireNo int, name string, homeW
 		}
 	}
 
-	// Find the system location for the homeworld planet
-	systemLocation, err := findSystemForPlanet(cluster, homeWorldID)
-	if err != nil {
-		return 0, "", "", fmt.Errorf("addEmpire: %w", err)
-	}
-
 	// Create starting colony
 	colony := domain.Colony{
 		ID:        domain.ColonyID(len(cluster.Colonies) + 1),
 		Empire:    domain.EmpireID(empireNo),
-		Location:  systemLocation,
+		Planet:    homeWorldID,
 		TechLevel: 1,
 	}
 	cluster.Colonies = append(cluster.Colonies, colony)
@@ -301,13 +299,57 @@ func (s *GameService) CreateHomeWorld(dataPath string, planetID domain.PlanetID,
 		planetID = chosen.planet.ID
 	}
 
-	// Set habitability on the chosen planet
+	// Load homeworld template and apply it
+	tmpl, err := s.Templates.ReadHomeworldTemplate(dataPath)
+	if err != nil {
+		return 0, fmt.Errorf("createHomeWorld: %w", err)
+	}
+
+	// Find max deposit ID across all existing deposits
+	maxDepositID := 0
+	for _, d := range cluster.Deposits {
+		if int(d.ID) > maxDepositID {
+			maxDepositID = int(d.ID)
+		}
+	}
+
+	// Find planet index (must use index to mutate in place)
+	planetIdx := -1
 	for i := range cluster.Planets {
 		if cluster.Planets[i].ID == planetID {
-			cluster.Planets[i].Habitability = 25
+			planetIdx = i
 			break
 		}
 	}
+
+	// Remove old deposits for this planet
+	oldIDs := make(map[domain.DepositID]bool, len(cluster.Planets[planetIdx].Deposits))
+	for _, did := range cluster.Planets[planetIdx].Deposits {
+		oldIDs[did] = true
+	}
+	var filtered []domain.Deposit
+	for _, d := range cluster.Deposits {
+		if !oldIDs[d.ID] {
+			filtered = append(filtered, d)
+		}
+	}
+	cluster.Deposits = filtered
+	cluster.Planets[planetIdx].Deposits = nil
+
+	// Add template deposits with fresh IDs
+	for _, dt := range tmpl.Deposits {
+		maxDepositID++
+		cluster.Deposits = append(cluster.Deposits, domain.Deposit{
+			ID:                domain.DepositID(maxDepositID),
+			Resource:          dt.Resource,
+			YieldPct:          dt.YieldPct,
+			QuantityRemaining: dt.QuantityRemaining,
+		})
+		cluster.Planets[planetIdx].Deposits = append(cluster.Planets[planetIdx].Deposits, domain.DepositID(maxDepositID))
+	}
+
+	// Set habitability from template
+	cluster.Planets[planetIdx].Habitability = tmpl.Habitability
 
 	// Add a new Race
 	race := domain.Race{
