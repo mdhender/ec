@@ -676,6 +676,61 @@ Assert it returns an error (template read failure propagates).
 
 ---
 
+## Post-Sprint Review — SOUSA Compliance & Code Smells
+
+**Reviewed commit:** `b969558fab0f25e34a9249bbee3ec678cf302d70`
+**Reviewer:** Amp (automated)
+**Date:** 2026-03-26
+
+### SOUSA Compliance
+
+| Check | Result |
+|---|---|
+| `domain` imports only stdlib (`math`) | ✅ Pass |
+| `app` imports only `domain` and stdlib | ✅ Pass |
+| `infra/filestore` imports `app` + `domain` (implements port) | ✅ Pass |
+| `runtime/cli` imports `app` + `delivery/cli` + `infra/filestore` | ✅ Pass |
+| `delivery` does not import `infra` | ✅ Pass |
+| Compile-time interface assertion (`var _ app.TemplateStore = (*Store)(nil)`) | ✅ Present |
+| No stale `Colony.Location` references | ✅ None found |
+| `go vet ./...` clean | ✅ Pass |
+| `go build ./...` clean | ✅ Pass |
+| `go test ./...` all pass | ✅ Pass |
+
+**Verdict:** No SOUSA violations introduced.
+
+### Code Smells
+
+1. **Missing guard on `planetIdx == -1` (Severity: bug-risk)**
+   - **File:** `app/game_service.go:326`
+   - `planetIdx` is set to `-1` on line 317 and searched by loop (lines 318–323), but if the planet is not found the code proceeds to use `cluster.Planets[planetIdx]` on line 326 which would panic with an index-out-of-range. The explicit planet-ID path validates existence earlier, but the auto-select path always finds a valid planet, so this is currently unreachable — however a defensive `if planetIdx == -1 { return error }` check should be added for safety.
+
+2. **`findSystemForPlanet` partially orphaned (Severity: low / dead-code risk)**
+   - **File:** `app/game_service.go:374–402`
+   - `Colony.Location` was removed in this sprint, and `findSystemForPlanet` was removed from `AddEmpire`. It is still used in `CreateHomeWorld`'s auto-select distance check (lines 275, 282), so it is not dead code — but it is no longer used by `AddEmpire`. Monitor whether future sprints make it fully dead.
+
+3. **`candidate.location` field unused after selection (Severity: cosmetic)**
+   - **File:** `app/game_service.go:265, 292`
+   - The `candidate` struct stores `location Coords` (line 265) and populates it (line 292), but after candidate selection (line 298) only `chosen.planet.ID` is used (line 299). The `location` field is needed during distance filtering (line 286), so it is not dead — but it is never read after the loop, which is slightly misleading. This is cosmetic and not worth changing.
+
+4. **Colony ID generation uses `len(cluster.Colonies) + 1` (Severity: medium / correctness risk)**
+   - **File:** `app/game_service.go:117`
+   - If colonies are ever deleted, this produces duplicate IDs. Currently no deletion path exists, so this is safe — but it should be tracked as a known limitation.
+
+5. **Template store methods accept `dataPath string` (Severity: cosmetic / design debt)**
+   - **Files:** `app/template_ports.go`, `infra/filestore/templates.go`
+   - Every `TemplateStore` method takes `dataPath` as a parameter rather than receiving it at construction time (like `NewStore` already does for `Store.dataPath`). This is inconsistent with how `GameStore` and `ClusterStore` work if those store the path internally. Acceptable for now since templates are read-only one-shots, but consider aligning in a future sprint.
+
+6. **No validation of template content (Severity: low)**
+   - **File:** `infra/filestore/templates.go`
+   - `ReadHomeworldTemplate` / `ReadColonyTemplate` unmarshal JSON but don't validate invariants (e.g., `Habitability >= 0`, deposits non-empty, `YieldPct` in range). Invalid template files would silently produce bad game state. Consider adding validation at the `app` layer when templates are applied.
+
+### Summary
+
+No SOUSA violations. Six code smells identified — one is a potential panic (missing `planetIdx` guard), one is a correctness risk for future colony deletion, and the rest are low-severity design/cosmetic items. Items 1 and 4 are recommended for Sprint 9 remediation.
+
+---
+
 ## Task Summary
 
 | Task | Title                                                  | Status | Depends On | Agent/Thread | Notes |
