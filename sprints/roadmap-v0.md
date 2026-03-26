@@ -100,47 +100,47 @@ The design doc (to be written before sprint 12) should cover: order text syntax,
 
 "MVP" = must work end-to-end in v0. "Stub" = phase exists but order is rejected as not-yet-implemented. "Auto" = no player order; the phase runs automatically.
 
-| Category       | Order                | Phase | MVP | Notes |
-|----------------|----------------------|-------|-----|-------|
-| **Production** | *(none — automatic)* | 1, 2 | Auto | Mining, farming, and factory output computed automatically each turn |
-| **Combat**     | Bombard              | 3 | Stub | |
-| **Combat**     | Invade               | 3 | Stub | |
-| **Combat**     | Raid                 | 3 | Stub | |
-| **Combat**     | Support attacker     | 3 | Stub | |
-| **Combat**     | Support defender     | 3 | Stub | |
-| **Setup**      | Set up (ship/colony) | 4 | **MVP** | Create new ships and colonies |
-| **Assembly**   | Disassemble | 5 | Stub | |
-| **Assembly**   | Build change | 6 | Stub | Reassign factory group output |
-| **Assembly**   | Mining change | 7 | Stub | Reassign mining group to new deposit |
-| **Transfer**   | Transfer | 8 | **MVP** | Move units between ships/colonies at same location |
-| **Assembly**   | Assemble (factory) | 9 | Stub | |
-| **Assembly**   | Assemble (mine) | 9 | Stub | |
-| **Assembly**   | Assemble (other) | 9 | Stub | |
-| **Market**     | Buy | 10 | Stub | |
-| **Market**     | Sell | 10 | Stub | |
-| **Recon**      | Survey | 11 | Stub | |
-| **Recon**      | Probe | 12 | Stub | |
-| **Espionage**  | Check rebels | 13 | Stub | |
-| **Espionage**  | Convert rebels | 13 | Stub | |
-| **Espionage**  | Incite rebels | 13 | Stub | |
-| **Espionage**  | Check for spies | 13 | Stub | |
-| **Espionage**  | Attack spies | 13 | Stub | |
-| **Espionage**  | Gather information | 13 | Stub | |
-| **Movement**   | Move (in-system) | 14 | **MVP** | Jump to another orbit in same system |
-| **Movement**   | Move (system jump) | 14 | **MVP** | Jump to another star system |
-| **Draft**      | Draft | 15 | Stub | |
-| **Draft**      | Disband | 15 | Stub | |
-| **Pay/Ration** | Pay | 16 | **MVP** | Set wages by population type |
-| **Pay/Ration** | Ration | 16 | **MVP** | Set food ration percentage |
-| **Population** | *(none — automatic)* | 17, 18, 20 | Auto | Rebellion, rebel growth, and population growth computed automatically |
-| **Admin**      | Name (planet) | 19 | **MVP** | |
-| **Admin**      | Name (ship/colony) | 19 | **MVP** | |
-| **Admin**      | Control | 19 | Stub | Claim control of a location |
-| **Admin**      | Un-control | 19 | Stub | Release control of a location |
+| Category       | Order                      | Phase | MVP | Notes |
+|----------------|----------------------------|-------|-----|-------|
+| **Production** | *(none — automatic)*       | 1, 2 | Auto | Mining, farming, and factory output computed automatically each turn |
+| **Combat**     | Bombard                    | 3 | Stub | |
+| **Combat**     | Invade                     | 3 | Stub | |
+| **Combat**     | Raid                       | 3 | Stub | |
+| **Combat**     | Support attacker           | 3 | Stub | |
+| **Combat**     | Support defender           | 3 | Stub | |
+| **Setup**      | Set up (ship/colony)       | 4 | **MVP** | Create new ships and colonies |
+| **Assembly**   | Disassemble                | 5 | Stub | |
+| **Assembly**   | Build change               | 6 | Stub | Reassign factory group output |
+| **Assembly**   | Mining change              | 7 | Stub | Reassign mining group to new deposit |
+| **Transfer**   | Transfer                   | 8 | **MVP** | Move units between ships/colonies at same location |
+| **Assembly**   | Assemble (factory)         | 9 | Stub | |
+| **Assembly**   | Assemble (mine)            | 9 | Stub | |
+| **Assembly**   | Assemble (other)           | 9 | Stub | |
+| **Market**     | Buy                        | 10 | Stub | |
+| **Market**     | Sell                       | 10 | Stub | |
+| **Recon**      | Survey                     | 11 | Stub | |
+| **Recon**      | Probe                      | 12 | Stub | |
+| **Espionage**  | Check rebels               | 13 | Stub | |
+| **Espionage**  | Convert rebels             | 13 | Stub | |
+| **Espionage**  | Incite rebels              | 13 | Stub | |
+| **Espionage**  | Check for spies            | 13 | Stub | |
+| **Espionage**  | Attack spies               | 13 | Stub | |
+| **Espionage**  | Gather information         | 13 | Stub | |
+| **Movement**   | Move (in-system)           | 14 | **MVP** | Jump to another orbit in same system |
+| **Movement**   | Move (system jump)         | 14 | **MVP** | Jump to another star system |
+| **Draft**      | Draft                      | 15 | Stub | |
+| **Draft**      | Disband                    | 15 | Stub | |
+| **Pay/Ration** | Pay                        | 16 | **MVP** | Set wages by population type |
+| **Pay/Ration** | Ration                     | 16 | **MVP** | Set food ration percentage |
+| **Population** | *(none — automatic)*       | 17, 18, 20 | Auto | Rebellion, rebel growth, and population growth computed automatically |
+| **Admin**      | Name (planet)              | 19 | **MVP** | |
+| **Admin**      | Name (ship/colony)         | 19 | **MVP** | |
+| **Admin**      | Control                    | 19 | Stub | Claim control of a location |
+| **Admin**      | Un-control                 | 19 | Stub | Release control of a location |
 | **Diplomacy**  | Permission (trade station) | 10 | Stub | |
-| **Diplomacy**  | Permission to colonize | 19 | Stub | |
-| **Comms**      | News (market planet) | 21 | Stub | |
-| **Comms**      | News (trade station) | 21 | Stub | |
+| **Diplomacy**  | Permission to colonize     | 19 | Stub | |
+| **Comms**      | News (market planet)       | 21 | Stub | |
+| **Comms**      | News (trade station)       | 21 | Stub | |
 
 ### MVP rationale
 

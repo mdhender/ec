@@ -92,7 +92,7 @@ func (k PlanetKind) String() string {
 type ColonyKind int
 
 const (
-	OpenAir  ColonyKind = iota + 1
+	OpenAir ColonyKind = iota + 1
 	Orbital
 	Enclosed
 )
@@ -149,6 +149,7 @@ type ColonyID int
 
 type Colony struct {
 	ID            ColonyID
+	Name          string
 	Empire        EmpireID
 	Planet        PlanetID
 	Kind          ColonyKind
@@ -163,6 +164,7 @@ type ShipID int
 
 type Ship struct {
 	ID        ShipID
+	Name      string
 	Empire    EmpireID
 	Location  Coords
 	TechLevel TechLevel

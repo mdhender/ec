@@ -1,6 +1,7 @@
 # Deploy
 
 ```bash
-TODO: ADD THE BUILD STEP HERE!
+npm run build
+
 rsync -avz --delete dist/ epimethean:/var/www/app.epimethean.dev/frontend
 ```

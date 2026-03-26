@@ -145,6 +145,7 @@ func (s *GameService) AddEmpire(dirPath string, empireNo int, name string, homeW
 
 	colony := domain.Colony{
 		ID:        domain.ColonyID(maxColonyID + 1),
+		Name:      fmt.Sprintf("Colony %d.%d", empireNo, maxColonyID+1),
 		Empire:    domain.EmpireID(empireNo),
 		Planet:    homeWorldID,
 		Kind:      colonyTmpl.Kind,
