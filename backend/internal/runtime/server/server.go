@@ -21,6 +21,7 @@ import (
 	deliveryhttp "github.com/mdhender/ec/internal/delivery/http"
 	"github.com/mdhender/ec/internal/infra/auth"
 	"github.com/mdhender/ec/internal/infra/filestore"
+	"github.com/mdhender/ec/internal/infra/ordertext"
 )
 
 const maxOrderBytes int64 = 1 << 20 // 1 MiB
@@ -78,6 +79,10 @@ func (s *Server) Start() error {
 		Token: jwtMgr,
 	}
 
+	// Build parse service.
+	orderParser := ordertext.NewParser()
+	parseOrdersSvc := &app.ParseOrdersService{Parser: orderParser}
+
 	// Empire extractor bridges infra/auth into delivery without a direct import.
 	empireExtractor := func(c *echo.Context) (int, bool) {
 		return auth.FromContext(c)
@@ -103,6 +108,7 @@ func (s *Server) Start() error {
 		s.shutdownKey,
 		s.shutdownCh,
 		maxOrderBytes,
+		parseOrdersSvc,
 	)
 
 	addr := fmt.Sprintf("%s:%s", s.host, s.port)

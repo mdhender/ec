@@ -21,6 +21,7 @@ func AddRoutes(
 	shutdownKey string,
 	shutdownCh chan struct{},
 	maxOrderBytes int64,
+	parseOrdersSvc *app.ParseOrdersService,
 ) {
 	// Public routes
 	e.GET("/api/health", GetHealth())
@@ -36,6 +37,7 @@ func AddRoutes(
 	protected := e.Group("", jwtMiddleware, empireAuth)
 	protected.GET("/api/:empireNo/orders", GetOrders(orderStore))
 	protected.POST("/api/:empireNo/orders", PostOrders(orderStore, maxOrderBytes))
+	protected.POST("/api/:empireNo/orders/parse", PostParseOrders(parseOrdersSvc, maxOrderBytes))
 	protected.GET("/api/:empireNo/reports", GetReports(reportStore))
 	protected.GET("/api/:empireNo/reports/:turnYear/:turnQuarter", GetReport(reportStore))
 	protected.GET("/api/:empireNo/dashboard", GetDashboard(dashboardStore))

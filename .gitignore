@@ -11,4 +11,6 @@ archives/
 .env*.local
 
 # build artifacts
+/backend/api
+/backend/cli
 tmp/

@@ -214,11 +214,11 @@ or diagnostics that conflict with it.
 **Design review checklist:**
 
 _SOUSA layers touched:_
-- [ ] domain
-- [ ] app
-- [ ] infra
-- [ ] delivery
-- [ ] runtime
+- [x] domain
+- [x] app
+- [x] infra
+- [x] delivery
+- [x] runtime
 - Allowed dependency direction: N/A — documentation only
 
 _Existing pattern to follow:_
@@ -240,13 +240,13 @@ _Impact scan:_
 - Search commands: `rg -n "MVP order set|order text syntax|parse-time|execution-time" sprints docs backend/internal`
 
 **Acceptance criteria:**
-- [ ] `docs/order-language-v0.md` exists and covers grammar, type hierarchy, phase mapping, and validation ownership
-- [ ] Every MVP order has at least one concrete syntax example in the doc
-- [ ] Known non-MVP command handling is specified as `not_implemented`
-- [ ] Move-order syntax is defined in a way that can be parsed now without requiring Sprint 16 execution wiring
-- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
-- [ ] New/changed API matches an existing pattern (or deviation documented)
-- [ ] SOUSA boundary valid for touched layers
+- [x] `docs/order-language-v0.md` exists and covers grammar, type hierarchy, phase mapping, and validation ownership
+- [x] Every MVP order has at least one concrete syntax example in the doc
+- [x] Known non-MVP command handling is specified as `not_implemented`
+- [x] Move-order syntax is defined in a way that can be parsed now without requiring Sprint 16 execution wiring
+- [x] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [x] New/changed API matches an existing pattern (or deviation documented)
+- [x] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - `None` — documentation task
@@ -288,10 +288,10 @@ Do **not** add execution methods, store access, or references to `app`, `infra`,
 
 _SOUSA layers touched:_
 - [x] domain
-- [ ] app
-- [ ] infra
-- [ ] delivery
-- [ ] runtime
+- [x] app
+- [x] infra
+- [x] delivery
+- [x] runtime
 - Allowed dependency direction: domain only
 
 _Existing pattern to follow:_
@@ -313,13 +313,13 @@ _Impact scan:_
 - Search commands: `rg -n "type .*ID|type .*Kind|type TechLevel|UnitKind" backend/internal/domain`
 
 **Acceptance criteria:**
-- [ ] `backend/internal/domain/orders.go` exports typed order values for every MVP order family needed in Sprint 12
-- [ ] The domain model for move orders preserves parsed intent without requiring the later ship-location execution model
-- [ ] Pure validation methods exist for static invariants and do not require live game state
-- [ ] At least one negative/guard-path test added or updated (if task has lookups, parsing, or ID allocation)
-- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
-- [ ] New/changed API matches an existing pattern (or deviation documented)
-- [ ] SOUSA boundary valid for touched layers
+- [x] `backend/internal/domain/orders.go` exports typed order values for every MVP order family needed in Sprint 12
+- [x] The domain model for move orders preserves parsed intent without requiring the later ship-location execution model
+- [x] Pure validation methods exist for static invariants and do not require live game state
+- [x] At least one negative/guard-path test added or updated (if task has lookups, parsing, or ID allocation)
+- [x] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [x] New/changed API matches an existing pattern (or deviation documented)
+- [x] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - `TestOrdersValidate_HappyPath` in `backend/internal/domain/orders_test.go` — representative valid MVP orders pass pure validation
@@ -360,11 +360,11 @@ so delivery can JSON-encode them without knowing parser internals.
 **Design review checklist:**
 
 _SOUSA layers touched:_
-- [ ] domain
+- [x] domain
 - [x] app
-- [ ] infra
-- [ ] delivery
-- [ ] runtime
+- [x] infra
+- [x] delivery
+- [x] runtime
 - Allowed dependency direction: app → domain only
 
 _Existing pattern to follow:_
@@ -386,13 +386,13 @@ _Impact scan:_
 - Search commands: `rg -n "OrderStore|LoginService|DashboardStore|AddRoutes\(" backend/internal`
 
 **Acceptance criteria:**
-- [ ] `OrderParser` port and `ParseOrdersService` exist in `app`
-- [ ] The parse result type contains typed orders plus stable diagnostics with `line`, `code`, and `message`
-- [ ] Empty input returns a successful empty result rather than an error
-- [ ] At least one negative/guard-path test added or updated (if task has lookups, parsing, or ID allocation)
-- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
-- [ ] New/changed API matches an existing pattern (or deviation documented)
-- [ ] SOUSA boundary valid for touched layers
+- [x] `OrderParser` port and `ParseOrdersService` exist in `app`
+- [x] The parse result type contains typed orders plus stable diagnostics with `line`, `code`, and `message`
+- [x] Empty input returns a successful empty result rather than an error
+- [x] At least one negative/guard-path test added or updated (if task has lookups, parsing, or ID allocation)
+- [x] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [x] New/changed API matches an existing pattern (or deviation documented)
+- [x] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - `TestParseOrdersService_EmptyInput` in `backend/internal/app/order_parse_service_test.go` — empty body yields zero orders and zero diagnostics
@@ -434,11 +434,11 @@ Implementation constraints:
 **Design review checklist:**
 
 _SOUSA layers touched:_
-- [ ] domain
-- [ ] app
+- [x] domain
+- [x] app
 - [x] infra
-- [ ] delivery
-- [ ] runtime
+- [x] delivery
+- [x] runtime
 - Allowed dependency direction: infra → app, domain only
 
 _Existing pattern to follow:_
@@ -460,14 +460,14 @@ _Impact scan:_
 - Search commands: `rg -n "OrderParser|ParseOrdersService|not_implemented|orders/parse" backend/internal`
 
 **Acceptance criteria:**
-- [ ] `backend/internal/infra/ordertext` satisfies the app `OrderParser` port
-- [ ] Representative examples for each MVP order family parse into typed domain orders
-- [ ] Blank lines and comment lines are ignored without diagnostics
-- [ ] Known non-MVP commands return `not_implemented` diagnostics instead of a generic unknown-command failure
-- [ ] At least one negative/guard-path test added or updated (if task has lookups, parsing, or ID allocation)
-- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
-- [ ] New/changed API matches an existing pattern (or deviation documented)
-- [ ] SOUSA boundary valid for touched layers
+- [x] `backend/internal/infra/ordertext` satisfies the app `OrderParser` port
+- [x] Representative examples for each MVP order family parse into typed domain orders
+- [x] Blank lines and comment lines are ignored without diagnostics
+- [x] Known non-MVP commands return `not_implemented` diagnostics instead of a generic unknown-command failure
+- [x] At least one negative/guard-path test added or updated (if task has lookups, parsing, or ID allocation)
+- [x] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [x] New/changed API matches an existing pattern (or deviation documented)
+- [x] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - `TestParser_ParseMVPOrders` in `backend/internal/infra/ordertext/parser_test.go` — representative valid MVP lines parse into the expected order kinds
@@ -507,11 +507,11 @@ Keep the existing `GET/POST /api/:empireNo/orders` behavior unchanged.
 **Design review checklist:**
 
 _SOUSA layers touched:_
-- [ ] domain
-- [ ] app
-- [ ] infra
+- [x] domain
+- [x] app
+- [x] infra
 - [x] delivery
-- [ ] runtime
+- [x] runtime
 - Allowed dependency direction: delivery → app only
 
 _Existing pattern to follow:_
@@ -533,13 +533,13 @@ _Impact scan:_
 - Search commands: `rg -n "PostOrders|GetOrders|AddRoutes\(|/orders" backend/internal/delivery/http`
 
 **Acceptance criteria:**
-- [ ] `POST /api/:empireNo/orders/parse` is registered under the protected route group
-- [ ] The handler reuses the existing body-size limit pattern from `PostOrders`
-- [ ] A successful parse with diagnostics returns HTTP 200 and the documented JSON shape
-- [ ] At least one negative/guard-path test added or updated (if task has lookups, parsing, or ID allocation)
-- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
-- [ ] New/changed API matches an existing pattern (or deviation documented)
-- [ ] SOUSA boundary valid for touched layers
+- [x] `POST /api/:empireNo/orders/parse` is registered under the protected route group
+- [x] The handler reuses the existing body-size limit pattern from `PostOrders`
+- [x] A successful parse with diagnostics returns HTTP 200 and the documented JSON shape
+- [x] At least one negative/guard-path test added or updated (if task has lookups, parsing, or ID allocation)
+- [x] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [x] New/changed API matches an existing pattern (or deviation documented)
+- [x] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - `TestPostParseOrders_OK` in `backend/internal/delivery/http/handlers_test.go` — valid request returns 200 with `ok=true` and the accepted count
@@ -573,10 +573,10 @@ correct layer.
 **Design review checklist:**
 
 _SOUSA layers touched:_
-- [ ] domain
-- [ ] app
-- [ ] infra
-- [ ] delivery
+- [x] domain
+- [x] app
+- [x] infra
+- [x] delivery
 - [x] runtime
 - Allowed dependency direction: runtime → app, infra, delivery
 
@@ -599,12 +599,12 @@ _Impact scan:_
 - Search commands: `rg -n "AddRoutes\(|NewStore\(|LoginService|ordertext" backend/internal/runtime backend/internal/delivery`
 
 **Acceptance criteria:**
-- [ ] `backend/internal/runtime/server/server.go` constructs the concrete text parser and wraps it in the app parse service
-- [ ] `delivery/http.AddRoutes` receives the new parse service from runtime rather than importing infra directly
-- [ ] Existing server startup behavior remains unchanged aside from the new route wiring
-- [ ] Stale references/helpers caused by this change removed or explicitly retained with reason
-- [ ] New/changed API matches an existing pattern (or deviation documented)
-- [ ] SOUSA boundary valid for touched layers
+- [x] `backend/internal/runtime/server/server.go` constructs the concrete text parser and wraps it in the app parse service
+- [x] `delivery/http.AddRoutes` receives the new parse service from runtime rather than importing infra directly
+- [x] Existing server startup behavior remains unchanged aside from the new route wiring
+- [x] Stale references/helpers caused by this change removed or explicitly retained with reason
+- [x] New/changed API matches an existing pattern (or deviation documented)
+- [x] SOUSA boundary valid for touched layers
 
 **Tests to add/update:**
 - `TestAutoShutdown` in `backend/internal/runtime/server/server_test.go` — existing startup smoke test still passes after parser wiring
@@ -615,11 +615,11 @@ _Impact scan:_
 
 ## Task Summary
 
-| Task | Title                         | Status | Agent/Thread | Notes |
-|------|-------------------------------|--------|--------------|-------|
-| 1    | Order language design doc     | TODO   |              |       |
-| 2    | Domain order model            | TODO   |              |       |
-| 3    | App parse contracts and service | TODO |              |       |
-| 4    | Infra text parser             | TODO   |              |       |
-| 5    | HTTP order-parse endpoint     | TODO   |              |       |
-| 6    | Runtime parser wiring         | TODO   |              |       |
+| Task | Title                           | Status | Agent/Thread | Notes |
+|------|---------------------------------|--------|--------------|-------|
+| 1    | Order language design doc       | DONE   |              |       |
+| 2    | Domain order model              | DONE   |              |       |
+| 3    | App parse contracts and service | DONE   |              |       |
+| 4    | Infra text parser               | DONE   |              |       |
+| 5    | HTTP order-parse endpoint       | DONE   |              |       |
+| 6    | Runtime parser wiring           | DONE   |              |       |

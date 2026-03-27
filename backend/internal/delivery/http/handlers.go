@@ -110,6 +110,32 @@ func GetOrders(orderStore app.OrderStore) func(c *echo.Context) error {
 	}
 }
 
+// PostParseOrders parses the submitted order text for the authenticated empire.
+// Requires EmpireAuthMiddleware to have validated ownership.
+func PostParseOrders(parseSvc *app.ParseOrdersService, maxBodyBytes int64) func(c *echo.Context) error {
+	return func(c *echo.Context) error {
+		rawBody, err := io.ReadAll(io.LimitReader(c.Request().Body, maxBodyBytes+1))
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "internal error"})
+		}
+		if int64(len(rawBody)) > maxBodyBytes {
+			return c.JSON(http.StatusRequestEntityTooLarge, map[string]any{"error": "request body too large"})
+		}
+
+		result, err := parseSvc.Parse(string(rawBody))
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "internal error"})
+		}
+
+		ok := len(result.Diagnostics) == 0
+		return c.JSON(http.StatusOK, map[string]any{
+			"ok":             ok,
+			"accepted_count": len(result.Orders),
+			"diagnostics":    result.Diagnostics,
+		})
+	}
+}
+
 // PostOrders stores the orders for the authenticated empire.
 // Requires EmpireAuthMiddleware to have validated ownership.
 func PostOrders(orderStore app.OrderStore, maxBodyBytes int64) func(c *echo.Context) error {

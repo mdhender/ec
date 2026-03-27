@@ -538,9 +538,7 @@ set returns `unknown_command`.
 The parser emits typed `domain.Order` values. Domain values do not carry parser
 artifacts such as comments, raw text, or line numbers.
 
-The domain model should use a small interface plus concrete order structs.
-
-Recommended shape:
+The domain model uses a small interface plus concrete order structs.
 
 ```text
 Order
@@ -560,27 +558,184 @@ Order
 └── NamePlanetOrder
 ```
 
-Recommended shared behavior:
+### Order interface
 
-- `Kind() OrderKind`
-- `Phase() int`
-- `Validate() error`
+```go
+type OrderKind int
 
-Recommended support types:
+type Order interface {
+    Kind()     OrderKind
+    Phase()    int
+    Validate() error
+}
+```
 
-- `UnitSpec { Kind domain.UnitKind; TechLevel domain.TechLevel; HasTechLevel bool }`
-- `SetupTransfer { Quantity int; Unit UnitSpec }`
-- `BuildTarget` as either `UnitSpec` or the special value `consumer-goods`
-- `OrbitRef { StarSequence string; Orbit int }`
-- `PlanetRef { Coords domain.Coords; Orbit OrbitRef }`
-- `PayRate` as fixed-point thousandths of a gold unit
+### Support types
+
+```go
+// UnitSpec is a parsed unit reference with an optional tech level.
+type UnitSpec struct {
+    Kind         UnitKind
+    TechLevel    TechLevel
+    HasTechLevel bool
+}
+
+// SetupTransfer is one item line inside a setup block.
+type SetupTransfer struct {
+    Quantity int
+    Unit     UnitSpec
+}
+
+// BuildTarget names the output of a factory group or factory assembly.
+// IsConsumerGoods is true when the text token was "consumer-goods";
+// otherwise Unit carries the target unit spec.
+type BuildTarget struct {
+    IsConsumerGoods bool
+    Unit            UnitSpec
+}
+
+// OrbitRef is a parsed orbit reference inside a system.
+// StarSequence is empty for a simple orbit number (e.g., "6").
+// For a star-qualified reference (e.g., "c-4"), StarSequence is "c".
+type OrbitRef struct {
+    StarSequence string // empty means primary star
+    Orbit        int    // 1..10
+}
+
+// PlanetRef identifies a specific planet by system coordinates and orbit.
+// Used for planet-naming orders.
+type PlanetRef struct {
+    Coords Coords
+    Orbit  OrbitRef
+}
+
+// PayRate is a wage rate stored as fixed-point thousandths of a gold unit.
+// 0.125 gold/turn is stored as 125.
+type PayRate int
+```
+
+### Concrete order structs
+
+```go
+type SetupKind int
+
+const (
+    SetupShip   SetupKind = iota + 1
+    SetupColony
+)
+
+// SetupOrder — Phase 4
+type SetupOrder struct {
+    SetupKind SetupKind
+    SourceID  int           // existing ship or colony ID
+    Transfers []SetupTransfer
+}
+
+// BuildChangeOrder — Phase 6
+type BuildChangeOrder struct {
+    SourceID int
+    GroupID  int
+    Target   BuildTarget
+}
+
+// MiningChangeOrder — Phase 7
+type MiningChangeOrder struct {
+    SourceID  int
+    GroupID   int
+    DepositID int
+}
+
+// TransferOrder — Phase 8
+type TransferOrder struct {
+    SourceID int
+    Quantity int
+    Unit     UnitSpec
+    TargetID int
+}
+
+// AssembleFactoryOrder — Phase 9
+// Assembles factory units into a factory group with a production target.
+type AssembleFactoryOrder struct {
+    SourceID int
+    Quantity int
+    Unit     UnitSpec
+    Target   BuildTarget
+}
+
+// AssembleMineOrder — Phase 9
+// Assembles mine units into a mining group assigned to a deposit.
+type AssembleMineOrder struct {
+    SourceID  int
+    Quantity  int
+    Unit      UnitSpec
+    DepositID int
+}
+
+// AssembleUnitsOrder — Phase 9
+// Assembles any other unit type (drives, life support, weapons, etc.).
+type AssembleUnitsOrder struct {
+    SourceID int
+    Quantity int
+    Unit     UnitSpec
+}
+
+// MoveOrbitOrder — Phase 14
+// In-system jump to a different orbit around the same star.
+type MoveOrbitOrder struct {
+    ShipID      int
+    Destination OrbitRef
+}
+
+// MoveSystemOrder — Phase 14
+// Inter-system jump to the named system coordinates.
+type MoveSystemOrder struct {
+    ShipID      int
+    Destination Coords
+}
+
+// DraftOrder — Phase 15
+type DraftOrder struct {
+    SourceID   int
+    Quantity   int
+    Population UnitKind // must be a draftable population kind
+}
+
+// PayOrder — Phase 16
+type PayOrder struct {
+    SourceID   int
+    Rate       PayRate
+    Population UnitKind // must be a payable population kind
+}
+
+// RationOrder — Phase 16
+type RationOrder struct {
+    SourceID int
+    Percent  int // 0..100
+}
+
+// NameObjectOrder — Phase 19
+// Names a ship or colony referenced by integer ID.
+type NameObjectOrder struct {
+    ObjectID int
+    Name     string
+}
+
+// NamePlanetOrder — Phase 19
+// Names a planet referenced by system coordinates and orbit.
+type NamePlanetOrder struct {
+    Planet PlanetRef
+    Name   string
+}
+```
 
 Design notes:
 
-- `SetupOrder` should contain the setup kind (`ship` or `colony`), the source ID, and the ordered transfer list.
-- `MoveOrbitOrder` and `MoveSystemOrder` are separate concrete types so the parser does not need a destination sum-type at every call site.
-- `NameObjectOrder` and `NamePlanetOrder` are separate so object-ID naming and planet-location naming stay unambiguous.
-- The domain model should preserve execution-relevant data only. Line numbers belong in app-layer diagnostics.
+- `MoveOrbitOrder` and `MoveSystemOrder` are separate concrete types so the parser does not need a destination sum-type at every call site. Neither type commits to a particular ship-location storage shape — that is resolved in Sprint 16.
+- `NameObjectOrder` and `NamePlanetOrder` are separate so object-ID naming (ships and colonies) and planet-location naming stay unambiguous.
+- `SetupOrder` captures the full transfer list so execution can verify materials without re-parsing.
+- All ID fields (`SourceID`, `TargetID`, `GroupID`, `DepositID`, `ShipID`, `ObjectID`) are plain `int` at parse time because the domain does not yet have typed IDs for every entity. Tasks 2 and later may replace them with the appropriate typed ID if it exists in `domain`.
+- `PayRate` is fixed-point thousandths rather than `float64` to avoid floating-point comparison issues in validation and execution.
+- The domain model preserves execution-relevant data only. Line numbers belong in app-layer diagnostics.
 
 ## Parse-Time Validation
 
