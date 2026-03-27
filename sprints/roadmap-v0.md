@@ -80,9 +80,41 @@ Everything else in v0 exists to support that goal.
 - React + Vite player interface (scaffolded — Sprint 2; not feature-complete)
 - Dashboard API and cards (Sprints 10–11)
 - **Shared UI components** — extract reusable `StatCard`, `DataTable`, `EmptyState` components from Sprint 11 patterns. Do this on second use (when the first interactive page is built), not speculatively. The trigger is the order submission UI or colony detail views.
-- **Page routing** — the `useState<Page>` pattern in `App.tsx` works through Sprint 11 (~8 pages). Evaluate `useReducer` or a lightweight router when colony/ship detail pages are added.
-- Order submission UI (not started)
-- Turn report viewer (not started)
+- **Page routing** — the `useState<Page>` pattern in `App.tsx` works through Sprint 11 (~8 pages). The MVP page set is ~13 pages with parameterized detail views; this is the trigger to evaluate `useReducer` or a lightweight router.
+
+### MVP pages
+
+Text-only, turn-based. No maps, no system viewers, no real-time updates.
+
+| Page | Type | Status | Notes |
+|------|------|--------|-------|
+| Dashboard | summary | done | |
+| Colonies | summary | partial | needs enhancement |
+| Colony detail | detail | not started | inventory, group status, production |
+| Ships | summary | placeholder | needs real data |
+| Ship detail | detail | not started | location, inventory, assembled groups, jump range |
+| Planets | summary | not started | sensor data only; requires visit |
+| Planet detail | detail | not started | sensor data only; requires visit |
+| Systems | summary | placeholder | visited systems only, sorted by distance |
+| System detail | detail | not started | sensor data + nearby systems; optionally in context of a specific ship (adds that ship's jump range overlay) |
+| Orders | entry | partial | needs parse button and submit button; text box only, no syntax UI |
+| Reports | summary | done | |
+| Report detail | detail | done | |
+
+### Sensor data
+
+Sensor data is available only for systems the player has a ship or colony present in. The data model uses the same attribute set as survey and probe reports; fields not yet implemented are present but marked N/A.
+
+Sensors automatically provide:
+- Number of ships in orbit and approximate mass of each
+- Number of colonies in orbit, approximate mass of each, and approximate number of production units per colony
+- Planet attributes (type, habitability, deposits, etc.) — present in the data model, N/A until Survey/Probe orders are implemented
+
+### Jump range (ship detail only)
+
+Jump range is ship-specific: computed from the ship's HyperEngine units and tech level. The ship detail page lists visited systems this ship can reach. The system detail page shows nearby systems sorted by distance but does not calculate reachability — that is the ship's concern, not the system's.
+
+Note: random cluster generation does not guarantee that any system falls within a given ship's jump range. This is a known v0 limitation, not a UI defect.
 
 ---
 
