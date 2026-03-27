@@ -1,6 +1,6 @@
 # Roadmap: v0
 
-This document lists the features required to ship v0. It is not a sprint plan — sprints pull from this list. Items are grouped by concern, not by delivery order.
+This document lists the features required to ship v0. It is not a sprint plan — sprints pull from this list. Items are arranged in dependency order so sprint planning can start from the earliest unblocked work. Completed items remain listed when later work depends on them.
 
 ---
 
@@ -10,7 +10,7 @@ The v0 game engine MVP is a ship that can move. Specifically: a player can build
 
 Everything else in v0 exists to support that goal.
 
-### Dependency chain (bottom-up)
+### Critical path to playable v0
 
 1. **Sequence counters** — safe ID generation before ships are created and destroyed
 2. **Build Change + Mining Change** — redirect factory and mining output to the needed resource types
@@ -26,59 +26,78 @@ Everything else in v0 exists to support that goal.
 
 ---
 
-## Game Setup
+## Dependency-Ordered Backlog
 
+### 1. Prerequisites already in place
+
+- Magic link → JWT flow (done — Sprint 1)
+- Order submission and storage (done — Sprint 1)
+- React + Vite player interface (scaffolded — Sprint 2; not feature-complete)
 - Cluster generation (done — Sprint 4)
+- Dashboard API and cards (done — Sprints 10–11)
+- File-backed store for cluster, game state, orders, and reports (in use — evolving through sprints)
+
+### 2. World setup prerequisites
+
 - Homeworld placement and race creation (Sprint 7)
 - Empire registration and homeworld assignment (Sprint 7)
 - Homeworld template and colony seeding (Sprints 8–9)
 
----
+### 3. Turn-engine foundation
 
-## Authentication and Sessions
-
-- Magic link → JWT flow (done — Sprint 1)
-
----
-
-## Empire Lifecycle
-
-- Active empires play normally.
-- Inactive empires become **independent nations** and are computer-moderated.
-  - v0 moderation is limited to two behaviors:
-    1. Feed the population.
-    2. Return all ships to the nearest colony as soon as possible.
-
----
-
-## Order Handling
-
-- Order submission and storage (done — Sprint 1)
-- **MVP order set** — the subset of orders that must work end-to-end for v0. See the "MVP Order Set" section below for the current list.
-- **Order parsing** — parse submitted order text into structured `domain.Order` values. No execution; parsing and validation only.
-- **Order execution** — run turn phases. All phases must be present; some may be stubs in v0.
-
----
-
-## Turn Processing
-
-- Turn phase pipeline (not started)
-- Report generation (not started) — nothing currently *creates* report files; the read path (`ListReports`/`GetReport`) exists but depends on the turn pipeline to produce output.
-
----
-
-## Persistence
-
-- File-backed store for cluster, game state, orders, and reports (in use — evolving through sprints)
+- **MVP order set + design doc** — define the subset of orders that must work end-to-end in v0. The design doc should cover order text syntax, the `domain.Order` type hierarchy, parse-time vs. execution-time validation, and the turn phase each order maps to.
 - **Sequence counters in game file** — add max sequence numbers for deposits, colonies, ships, etc. to `game.json` so ID generation does not rely on `len(slice) + 1`, which breaks if records are ever deleted. Required before ships are created and destroyed in the turn pipeline.
-- **SQLite persistence layer** — replace the file-backed store with a SQLite database using `modernc.org/sqlite` (CGo-free) and `zombiezen.com/go/sqlite` (query interface). File store serves as the import source once the models stabilize. **Trigger:** SQLite is needed when order parsing and turn-state persistence make the "read whole file, mutate, write whole file" model painful. Expected around sprint 13–14, after the domain model stabilizes.
+- **Ship orbit/position model** — resolve how ships track location within a system. `Ship.Location` currently identifies the system but not the orbit. Must be decided before move orders can be implemented.
+- **Order parsing** — parse submitted order text into structured `domain.Order` values. No execution; parsing and validation only.
+- **Turn phase pipeline** — implement the 21-phase sequence of play so the turn engine exists even when many phases are stubs.
+- **Order execution** — run turn phases against parsed orders. All phases must be present; some may be stubs in v0.
+
+### 4. MVP economy and production chain
+
+- **Build Change + Mining Change** — redirect factory and mining output to the needed resource types.
+- **Draft** — draft population into specialist roles (ConstructionWorkers, Professionals, etc.).
+- **Pay + Ration** — keep the population productive and fed each turn.
+- **Phase 1 & 2 auto-production** — mines produce resources, farms produce food, and factories produce units automatically each turn.
+
+### 5. MVP ship construction and movement chain
+
+- **Transfer** — move manufactured units from ground colony to orbital colony.
+- **Assemble** — assemble unit groups from inventory items on a colony or ship.
+- **Set up** — create the ship from an assembled set of units.
+- **Move in-system + Move system jump** — jump to another orbit or star system.
+- **Name (planet, ship, colony)** — MVP admin support so players can issue meaningful follow-up orders after ships and colonies exist.
+
+### 6. Close the game loop
+
+- **Report generation** — create report files from turn-processing results. The read path (`ListReports`/`GetReport`) already exists but depends on turn processing to produce output.
+- **Turn reports** — text summary per empire of what was produced, what is in inventory, and where ships are; required to close the game loop.
+- **Empire lifecycle automation** — inactive empires become independent nations with limited v0 moderation: feed the population and return all ships to the nearest colony as soon as possible.
+
+### 7. Frontend rollout, after backend data exists
+
+- **Orders page completion** — add parse and submit actions to the text-based order entry flow.
+- **Colonies page enhancement** — expand the summary view once production and inventory data are available.
+- **Colony detail page** — inventory, group status, and production.
+- **Ships page** — replace placeholder data with real ship data.
+- **Ship detail page** — location, inventory, assembled groups, and jump range.
+- **Systems page** — visited systems only, sorted by distance.
+- **System detail page** — sensor data and nearby systems; optionally in the context of a specific ship.
+- **Planets page** — sensor data only; requires a visit.
+- **Planet detail page** — sensor data only; requires a visit.
+- **Shared UI components** — extract `StatCard`, `DataTable`, and `EmptyState` on second use, triggered by the first interactive page set.
+- **Page routing** — reevaluate `useState<Page>` once the MVP page set grows to roughly 13 pages with parameterized detail views.
+
+### 8. Documentation and trigger-based infrastructure
+
+- **Documentation site content** — publish Hugo docs only after behavior is implemented and examples can be checked against real API behavior.
+- **SQLite persistence layer** — replace the file-backed store once order parsing and turn-state persistence make whole-file mutation painful. This is a trigger-based change expected after the domain model stabilizes, not a prerequisite for the MVP loop.
 
 ---
 
-## Frontend
+## Frontend Rollout
 
 - React + Vite player interface (scaffolded — Sprint 2; not feature-complete)
-- Dashboard API and cards (Sprints 10–11)
+- Dashboard API and cards (done — Sprints 10–11)
 - **Shared UI components** — extract reusable `StatCard`, `DataTable`, `EmptyState` components from Sprint 11 patterns. Do this on second use (when the first interactive page is built), not speculatively. The trigger is the order submission UI or colony detail views.
 - **Page routing** — the `useState<Page>` pattern in `App.tsx` works through Sprint 11 (~8 pages). The MVP page set is ~13 pages with parameterized detail views; this is the trigger to evaluate `useReducer` or a lightweight router.
 
