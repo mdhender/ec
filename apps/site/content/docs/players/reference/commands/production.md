@@ -10,6 +10,10 @@ Production orders manage factories, mines, assembly, logistics, and the creation
 
 Creates a new ship or colony by transferring materials from an existing ship or colony. Executes in phase 4 (Set up).
 
+{{< callout type="warning" >}}
+   Set up is recognized by the parser but returns `not_implemented` in v0. The full multi-line block syntax will be enabled in a later release.
+{{< /callout >}}
+
 `setup` is the only multi-line order. The block opens with a `setup` line, contains one or more `transfer` lines, and closes with `end`.
 
 **Syntax**
@@ -63,7 +67,7 @@ Redirects a factory group to produce a different unit type. Executes in phase 6 
 **Syntax**
 
 ```text
-<id> build change <group-id> <build-target>
+build change <id> <group-id> <build-target>
 ```
 
 **Parameters**
@@ -77,8 +81,8 @@ Redirects a factory group to produce a different unit type. Executes in phase 6 
 **Examples**
 
 ```text
-16 build change 8 hyper-engine-1
-16 build change 9 consumer-goods
+build change 16 8 hyper-engine-1
+build change 16 9 consumer-goods
 ```
 
 ---
@@ -90,7 +94,7 @@ Reassigns a mining group to a different deposit. Executes in phase 7 (Mining cha
 **Syntax**
 
 ```text
-<id> mining change <group-id> <deposit-id>
+mining change <id> <group-id> <deposit-id>
 ```
 
 **Parameters**
@@ -104,7 +108,7 @@ Reassigns a mining group to a different deposit. Executes in phase 7 (Mining cha
 **Example**
 
 ```text
-348 mining change 18 92
+mining change 348 18 92
 ```
 
 ---
@@ -118,38 +122,40 @@ One `transfer` order moves one unit type. Issue multiple orders to move several 
 **Syntax**
 
 ```text
-<id> transfer <quantity> <unit-token> <id>
+transfer <source-id> <dest-id> <unit-token> <quantity>
 ```
 
 **Parameters**
 
 | Parameter | Description |
 |---|---|
-| First `<id>` | Source ship or colony ID. Must be a positive integer. |
-| `<quantity>` | Number of units to transfer. Must be a positive integer. |
+| `<source-id>` | Source ship or colony ID. Must be a positive integer. |
+| `<dest-id>` | Destination ship or colony ID. Must be a positive integer. |
 | `<unit-token>` | Unit type to transfer. See [Units](/docs/players/reference/units/) for valid tokens. |
-| Second `<id>` | Destination ship or colony ID. Must be a positive integer. |
+| `<quantity>` | Number of units to transfer. Must be a positive integer. |
 
 **Example**
 
 ```text
-22 transfer 10 spy 29
+transfer 22 29 spy 10
 ```
 
 ---
 
 ## Assemble
 
-Converts disassembled units into an assembled group. Executes in phase 9 (Assembly). The variant is determined by the unit token in the third field.
+Converts disassembled units into an assembled group. Executes in phase 9 (Assembly).
 
-### Factory assembly
+There are three forms. The token after the location ID determines which form is used.
 
-Assembles factory units into a factory group with a production target.
+### Assemble generic units
+
+Assembles any unit type other than factories or mines.
 
 **Syntax**
 
 ```text
-<id> assemble <quantity> <factory-unit> <build-target>
+assemble <id> <unit-token> <quantity>
 ```
 
 **Parameters**
@@ -157,61 +163,66 @@ Assembles factory units into a factory group with a production target.
 | Parameter | Description |
 |---|---|
 | `<id>` | Colony or ship ID. Must be a positive integer. |
-| `<quantity>` | Number of factory units to assemble. Must be a positive integer. |
-| `<factory-unit>` | A factory unit token, e.g. `factory-6`. |
-| `<build-target>` | Initial production target. A unit token or `consumer-goods`. |
-
-**Example**
-
-```text
-91 assemble 54000 factory-6 consumer-goods
-```
-
-### Mine assembly
-
-Assembles mine units into a mining group assigned to a specific deposit.
-
-**Syntax**
-
-```text
-<id> assemble <quantity> <mine-unit> <deposit-id>
-```
-
-**Parameters**
-
-| Parameter | Description |
-|---|---|
-| `<id>` | Colony or ship ID. Must be a positive integer. |
-| `<quantity>` | Number of mine units to assemble. Must be a positive integer. |
-| `<mine-unit>` | A mine unit token, e.g. `mine-2`. |
-| `<deposit-id>` | Deposit to assign the group to. Must be a positive integer. |
-
-**Example**
-
-```text
-83 assemble 25680 mine-2 148
-```
-
-### Other assembly
-
-Assembles any other unit type (drives, life support, weapons, and similar).
-
-**Syntax**
-
-```text
-<id> assemble <quantity> <unit-token>
-```
-
-**Parameters**
-
-| Parameter | Description |
-|---|---|
-| `<id>` | Colony or ship ID. Must be a positive integer. |
-| `<quantity>` | Number of units to assemble. Must be a positive integer. |
 | `<unit-token>` | Unit type to assemble. See [Units](/docs/players/reference/units/) for valid tokens. |
+| `<quantity>` | Number of units to assemble. Must be a positive integer. Commas are accepted. |
 
-**Example**
+**Examples**
 
 ```text
-58 assemble 6000 missile-launcher-1
+assemble 58 missile-launcher-1 6000
+assemble 58 missile-launcher-1 6,000
+```
+
+### Assemble factories
+
+Assembles factory units and sets what they will produce.
+
+**Syntax**
+
+```text
+assemble <id> factory <factory-unit> <quantity> <build-target>
+```
+
+**Parameters**
+
+| Parameter | Description |
+|---|---|
+| `<id>` | Colony or ship ID. Must be a positive integer. |
+| `<factory-unit>` | Factory unit type, e.g. `factory-6`. Must include a tech-level suffix. |
+| `<quantity>` | Number of factory units to assemble. Must be a positive integer. Commas are accepted. |
+| `<build-target>` | Unit type the factories will produce. See [Units](/docs/players/reference/units/) for valid tokens. |
+
+**Examples**
+
+```text
+assemble 91 factory factory-6 54000 hyper-engine-1
+assemble 91 factory factory-6 54,000 hyper-engine-1
+assemble 16 factory factory-4 12000 consumer-goods
+```
+
+### Assemble mines
+
+Assembles mine units and assigns them to a deposit.
+
+**Syntax**
+
+```text
+assemble <id> mine <mine-unit> <quantity> <deposit-id>
+```
+
+**Parameters**
+
+| Parameter | Description |
+|---|---|
+| `<id>` | Colony or ship ID. Must be a positive integer. |
+| `<mine-unit>` | Mine unit type, e.g. `mine-2`. Must include a tech-level suffix. |
+| `<quantity>` | Number of mine units to assemble. Must be a positive integer. Commas are accepted. |
+| `<deposit-id>` | ID of the deposit to assign the mines to. Must be a positive integer. |
+
+**Examples**
+
+```text
+assemble 83 mine mine-2 25680 92
+assemble 83 mine mine-2 25,680 92
+assemble 47 mine mine-1 4000 7
 ```

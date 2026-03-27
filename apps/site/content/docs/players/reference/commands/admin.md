@@ -13,7 +13,7 @@ Converts population into specialist roles. Executes in phase 15 (Draft).
 **Syntax**
 
 ```text
-<id> draft <quantity> <population-kind>
+draft <id> <population-kind> <quantity>
 ```
 
 **Parameters**
@@ -21,15 +21,15 @@ Converts population into specialist roles. Executes in phase 15 (Draft).
 | Parameter | Description |
 |---|---|
 | `<id>` | Colony ID. Must be a positive integer. |
-| `<quantity>` | Number of people to draft. Must be a positive integer. |
 | `<population-kind>` | Target specialist kind. Accepted values: `professional`, `soldier`, `spy`, `construction-worker`. |
+| `<quantity>` | Number of people to draft. Must be a positive integer. |
 
 **Examples**
 
 ```text
-13 draft 3600 soldier
-16 draft 400 professional
-16 draft 250 construction-worker
+draft 13 soldier 3600
+draft 16 professional 400
+draft 16 construction-worker 250
 ```
 
 ---
@@ -41,7 +41,7 @@ Sets the wage rate for a population kind at a colony. Executes in phase 16 (Pay/
 **Syntax**
 
 ```text
-<id> pay <rate> <population-kind>
+pay <id> <population-kind> <rate>
 ```
 
 **Parameters**
@@ -49,15 +49,15 @@ Sets the wage rate for a population kind at a colony. Executes in phase 16 (Pay/
 | Parameter | Description |
 |---|---|
 | `<id>` | Colony ID. Must be a positive integer. |
-| `<rate>` | Wage rate in gold per turn. A non-negative decimal with up to three fractional digits, e.g. `0.125`. |
 | `<population-kind>` | Population kind to set wages for. Accepted values: `unemployable`, `unskilled-worker`, `professional`, `soldier`, `spy`, `construction-worker`. |
+| `<rate>` | Wage rate in gold per turn. A non-negative integer. |
 
 **Examples**
 
 ```text
-38 pay 0.125 unskilled-worker
-38 pay 0.375 professional
-38 pay 0.250 soldier
+pay 38 unskilled-worker 1
+pay 38 professional 5
+pay 38 soldier 4
 ```
 
 ---
@@ -69,7 +69,7 @@ Sets the food ration percentage at a colony. Executes in phase 16 (Pay/ration).
 **Syntax**
 
 ```text
-<id> ration <percent>
+ration <id> <percent>
 ```
 
 **Parameters**
@@ -77,39 +77,61 @@ Sets the food ration percentage at a colony. Executes in phase 16 (Pay/ration).
 | Parameter | Description |
 |---|---|
 | `<id>` | Colony ID. Must be a positive integer. |
-| `<percent>` | Ration level. An integer followed by `%`, in the range `0`–`100`. |
+| `<percent>` | Ration level as an integer in the range `0`–`100`. |
 
 **Example**
 
 ```text
-16 ration 50%
+ration 16 50
 ```
 
 ---
 
 ## Name
 
-Assigns a name to a ship, colony, or planet. Executes in phase 19 (Naming/control). Names must be enclosed in double quotes and may be 1–24 characters.
+Assigns a name to a ship, colony, or planet. Executes in phase 19 (Naming/control). The target kind (`ship`, `colony`, or `planet`) must be specified explicitly. Names must be enclosed in double quotes.
 
-### Name a ship or colony
+### Name a ship
 
 **Syntax**
 
 ```text
-<id> name "<name>"
+name ship <id> <name>
 ```
 
 **Parameters**
 
 | Parameter | Description |
 |---|---|
-| `<id>` | Ship or colony ID. Must be a positive integer. |
-| `"<name>"` | New name. A quoted string, 1–24 characters. |
+| `<id>` | Ship ID. Must be a positive integer. |
+| `<name>` | New name. A quoted string of 1–24 characters. |
 
 **Example**
 
 ```text
-39 name "Dragonfire"
+name ship 39 "Dragonfire"
+name ship 39 "Slash // Burn"
+```
+
+### Name a colony
+
+**Syntax**
+
+```text
+name colony <id> <name>
+```
+
+**Parameters**
+
+| Parameter | Description |
+|---|---|
+| `<id>` | Colony ID. Must be a positive integer. |
+| `<name>` | New name. A quoted string of 1–24 characters. |
+
+**Example**
+
+```text
+name colony 7 "Outpost Beta"
 ```
 
 ### Name a planet
@@ -117,18 +139,18 @@ Assigns a name to a ship, colony, or planet. Executes in phase 19 (Naming/contro
 **Syntax**
 
 ```text
-<planet-ref> name "<name>"
+name planet <id> <name>
 ```
 
 **Parameters**
 
 | Parameter | Description |
 |---|---|
-| `<planet-ref>` | Planet location as `<x>-<y>-<z>/<orbit-ref>`, e.g. `5-12-38/2` or `5-12-38/c-4`. |
-| `"<name>"` | New name. A quoted string, 1–24 characters. |
+| `<id>` | Planet ID. Must be a positive integer. |
+| `<name>` | New name. A quoted string of 1–24 characters. |
 
 **Example**
 
 ```text
-5-12-38/2 name "Goldball Prime"
+name planet 5 "New Terra"
 ```

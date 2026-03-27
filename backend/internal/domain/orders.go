@@ -210,7 +210,8 @@ func (o TransferOrder) Validate() error {
 	return nil
 }
 
-// AssembleOrder assembles units into an operational group on a colony or ship.
+// AssembleOrder assembles generic units into an operational group on a colony or ship.
+// Syntax: assemble <id> <unit-token> <qty>
 type AssembleOrder struct {
 	OrderKind OrderKind
 	ColonyID  ColonyID
@@ -233,6 +234,70 @@ func (o AssembleOrder) Validate() error {
 	}
 	if o.Quantity <= 0 {
 		return errors.New("assemble order: quantity must be positive")
+	}
+	return nil
+}
+
+// AssembleFactoryOrder assembles factory units configured to produce a specific unit kind.
+// Syntax: assemble <id> factory <factory-unit> <qty> <build-target>
+type AssembleFactoryOrder struct {
+	OrderKind   OrderKind
+	LocationID  ColonyID
+	FactoryUnit UnitKind // must be Factory
+	FactoryQty  int
+	BuildTarget UnitKind
+}
+
+func (o AssembleFactoryOrder) Kind() OrderKind  { return o.OrderKind }
+func (o AssembleFactoryOrder) TurnPhase() Phase { return PhaseAssemble }
+
+func (o AssembleFactoryOrder) Validate() error {
+	if o.OrderKind != OrderKindAssemble {
+		return errors.New("assemble-factory order: invalid order kind")
+	}
+	if o.LocationID <= 0 {
+		return errors.New("assemble-factory order: location ID must be positive")
+	}
+	if o.FactoryUnit != Factory {
+		return errors.New("assemble-factory order: factory unit must be a factory")
+	}
+	if o.FactoryQty <= 0 {
+		return errors.New("assemble-factory order: factory quantity must be positive")
+	}
+	if o.BuildTarget <= 0 {
+		return errors.New("assemble-factory order: build target must be valid")
+	}
+	return nil
+}
+
+// AssembleMineOrder assembles mine units assigned to a specific deposit.
+// Syntax: assemble <id> mine <mine-unit> <qty> <deposit-id>
+type AssembleMineOrder struct {
+	OrderKind  OrderKind
+	LocationID ColonyID
+	MineUnit   UnitKind // must be Mine
+	MineQty    int
+	DepositID  DepositID
+}
+
+func (o AssembleMineOrder) Kind() OrderKind  { return o.OrderKind }
+func (o AssembleMineOrder) TurnPhase() Phase { return PhaseAssemble }
+
+func (o AssembleMineOrder) Validate() error {
+	if o.OrderKind != OrderKindAssemble {
+		return errors.New("assemble-mine order: invalid order kind")
+	}
+	if o.LocationID <= 0 {
+		return errors.New("assemble-mine order: location ID must be positive")
+	}
+	if o.MineUnit != Mine {
+		return errors.New("assemble-mine order: mine unit must be a mine")
+	}
+	if o.MineQty <= 0 {
+		return errors.New("assemble-mine order: mine quantity must be positive")
+	}
+	if o.DepositID <= 0 {
+		return errors.New("assemble-mine order: deposit ID must be positive")
 	}
 	return nil
 }

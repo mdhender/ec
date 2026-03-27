@@ -623,3 +623,23 @@ _Impact scan:_
 | 4    | Infra text parser               | DONE   |              |       |
 | 5    | HTTP order-parse endpoint       | DONE   |              |       |
 | 6    | Runtime parser wiring           | DONE   |              |       |
+
+---
+
+## Sprint Review Findings
+
+Issues found during sprint review after the initial implementation was committed.
+Root cause: the parser, the tests, and the docs were written independently without being cross-checked against each other.
+
+The first visible symptom was the blog post using `;;` as the comment character. Pulling that thread uncovered six additional problems.
+
+| # | Finding | Status |
+|---|---------|--------|
+| 1 | Blog post used `;;` as the comment character; grammar doc specified `//` | DONE |
+| 2 | Parser stripped comments using `#`, not `//` | DONE |
+| 3 | Two parser tests used ID-first syntax (`77 move orbit 6`, `39 name "Slash // Burn"`); parser had always used command-first | DONE |
+| 4 | No test coverage for `setup` returning `not_implemented` | DONE |
+| 5 | Parser used diagnostic codes `bad_syntax` and `bad_value`; spec required `syntax` and `invalid_value` | DONE |
+| 6 | Parser was missing `unterminated_quote` detection and `unexpected_end` handling entirely | DONE |
+| 7 | All player-facing command docs used ID-first syntax in every syntax block and example | DONE |
+| 8 | Developer reference doc used ID-first syntax in the command table and all per-command sections | DONE |

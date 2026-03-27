@@ -13,7 +13,7 @@ Moves a ship to a different orbit within the same star system.
 **Syntax**
 
 ```text
-<id> move orbit <orbit-ref>
+move <id> orbit <orbit-ref>
 ```
 
 **Parameters**
@@ -26,8 +26,8 @@ Moves a ship to a different orbit within the same star system.
 **Examples**
 
 ```text
-77 move orbit 6
-88 move orbit c-4
+move 77 orbit 6
+move 88 orbit c-4
 ```
 
 ---
@@ -39,7 +39,7 @@ Moves a ship to a different star system.
 **Syntax**
 
 ```text
-<id> move system <system-coords>
+move <id> system <system-coords>
 ```
 
 **Parameters**
@@ -52,5 +52,5 @@ Moves a ship to a different star system.
 **Example**
 
 ```text
-79 move system 4-6-19
+move 79 system 4-6-19
 ```

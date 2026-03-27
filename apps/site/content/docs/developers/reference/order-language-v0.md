@@ -55,32 +55,35 @@ The v0 parser accepts a scrubbed, whitespace-oriented order language.
 Example:
 
 ```text
-77 move orbit 6 // move the scout inward
-39 name "Slash // Burn"
+move 77 orbit 6 // move the scout inward
+name ship 39 "Slash // Burn"
 ```
 
 ### Quoted strings
 
 - Double quotes delimit a single string field.
 - Quoted strings preserve case and spaces.
-- Quotes are required for names.
+- Quotes are required for all names. A name without surrounding quotes is a parse error.
+- Surrounding quotes are stripped; the domain value contains only the characters between them.
 - Escape sequences are not part of v0. A literal `"` inside a name is not supported.
 - An unterminated quoted string is a parse diagnostic.
 
 ### Numbers
 
-- Positive integers may contain embedded commas for readability.
-- Commas are removed before integer parsing.
-- IDs, group numbers, deposit numbers, and quantities must be positive integers.
-- Percentages are integers followed immediately by `%`.
-- Pay rates are decimal literals with up to three fractional digits.
+- IDs, group numbers, and deposit numbers must be bare positive integers (no commas).
+- Quantities accept embedded commas as thousands separators; commas are removed before parsing.
+- Percentages are bare integers in the range `0`–`100`. No `%` suffix.
+- Pay rates are non-negative integers in game currency units.
 
-Examples:
+Examples (quantity field):
 
 - `50000`
 - `50,000`
-- `75%`
-- `0.125`
+
+Examples (ID field):
+
+- `91`
+- `348`
 
 ### Deliberate v0 simplifications
 
@@ -122,51 +125,38 @@ Examples:
 - `6`
 - `c-4`
 
-`<planet-ref>` is:
-
-```text
-<system-coords>/<orbit-ref>
-```
-
-Examples:
-
-- `5-12-38/2`
-- `5-12-38/c-4`
-
 ### Percentages and decimals
 
 `<percent>`:
 
-- integer followed by `%`
+- bare integer, no `%` suffix
 - parse-time range: `0..100`
 
 `<rate>`:
 
-- decimal literal with up to three fractional digits
+- non-negative integer in game currency units
 - parse-time range: `>= 0`
-- domain representation is fixed-point thousandths, not `float64`
 
 Examples:
 
-- `50%`
-- `100%`
-- `0.125`
-- `1.600`
+- `50`
+- `100`
+- `0`
+- `5`
 
 ### Names
 
-`<name>` is a quoted string.
+`<name>` is a quoted string: the remaining tokens on the line after the target ID, joined by spaces, which must begin and end with `"`.
 
 Parse-time rules:
 
-- quotes required
-- length 1..24 characters after stripping the outer quotes
-- surrounding quotes are not preserved in the domain value
+- quotes are required
+- surrounding quotes are stripped before the name is stored in the domain value
+- length 1..24 characters (measured after stripping quotes)
 
 ## Units and Population Kinds
 
-The parser maps textual unit tokens to `domain.UnitKind` plus an optional
-`domain.TechLevel`.
+The parser maps textual unit tokens to `domain.UnitKind`. Tech-level suffixes are not part of the v0 token vocabulary; use the base name only.
 
 ### Canonical population tokens
 
@@ -188,48 +178,36 @@ in repository docs where they are unambiguous, for example `professionals`, `sol
 
 The canonical unit vocabulary follows lower-case, domain-aligned slugs.
 
-Examples without tech level:
+Population and commodity units use the base name only — no tech-level suffix:
 
 - `food`
-- `fuel`
-- `gold`
-- `metallics`
-- `non-metallics`
 - `consumer-goods`
 - `structural`
 - `light-structural`
 - `research-point`
 
-Examples with required tech level suffix:
+Equipment units require a `-N` tech-level suffix. The base name alone is rejected:
 
-- `factory-6`
-- `mine-2`
-- `farm-1`
-- `hyper-engine-1`
-- `space-drive-1`
-- `life-support-1`
-- `sensor-1`
-- `automation-3`
-- `transport-2`
-- `energy-weapon-4`
-- `energy-shield-4`
-- `missile-launcher-1`
+| Base name | Example with required suffix |
+|---|---|
+| `factory` | `factory-6` |
+| `mine` | `mine-2` |
+| `farm` | `farm-1` |
+| `hyper-engine` | `hyper-engine-1` |
+| `space-drive` | `space-drive-1` |
+| `life-support` | `life-support-3` |
+| `sensor` | `sensor-2` |
+| `automation` | `automation-1` |
+| `transport` | `transport-1` |
+| `energy-weapon` | `energy-weapon-2` |
+| `energy-shield` | `energy-shield-1` |
+| `missile-launcher` | `missile-launcher-1` |
 
-The parser may accept historically common aliases where they are already present in
-repository documentation, such as:
-
-- `fact-6` for `factory-6`
-- `hype-1` for `hyper-engine-1`
-- `spac-1` for `space-drive-1`
-- `sen-1` for `sensor-1`
-- `cons` for `consumer-goods`
-
-Alias acceptance exists to reduce friction when players copy examples from older docs.
-Canonical docs and tests should use the full tokens.
+Accepted aliases for some base names: `fact` for `factory`, `hype` for `hyper-engine`, `spac` for `space-drive`, `sen` for `sensor`, `cons` for `consumer-goods`.
 
 ### Manufacturing targets
 
-`<build-target>` and the factory form of `assemble` use one of these forms:
+`<build-target>` for the `build change` command accepts:
 
 - `<unit-token>`
 - `consumer-goods`
@@ -243,20 +221,21 @@ The historical `research` and `retool` targets are recognized but treated as
 
 | Command | Canonical form | Notes |
 |---|---|---|
-| Set up | `setup ... end` | only multi-line order |
-| Build Change | `<id> build change <group-id> <build-target>` | historical alias `build-change` not required |
-| Mining Change | `<id> mining change <group-id> <deposit-id>` | historical alias `mining` may be accepted |
-| Transfer | `<id> transfer <quantity> <unit-token> <id>` | one item per order |
-| Assemble (factory) | `<id> assemble <quantity> <factory-unit> <build-target>` | determined by first unit token |
-| Assemble (mine) | `<id> assemble <quantity> <mine-unit> <deposit-id>` | determined by first unit token |
-| Assemble (other) | `<id> assemble <quantity> <unit-token>` | all other assembly |
-| Move (in-system) | `<id> move orbit <orbit-ref>` | explicit destination kind |
-| Move (system jump) | `<id> move system <system-coords>` | explicit destination kind |
-| Draft | `<id> draft <quantity> <population-kind>` | v0 specialist drafting only |
-| Pay | `<id> pay <rate> <population-kind>` | fixed-point decimal |
-| Ration | `<id> ration <percent>` | integer percentage |
-| Name (ship/colony) | `<id> name <name>` | quoted name required |
-| Name (planet) | `<planet-ref> name <name>` | quoted name required |
+| Set up | `setup ... end` | only multi-line order; returns `not_implemented` in v0 |
+| Build Change | `build change <id> <group-id> <build-target>` | |
+| Mining Change | `mining change <id> <group-id> <deposit-id>` | |
+| Transfer | `transfer <source-id> <dest-id> <unit-token> <quantity>` | one item per order |
+| Assemble (other) | `assemble <id> <unit-token> <quantity>` | generic units |
+| Assemble (factory) | `assemble <id> factory <factory-unit> <quantity> <build-target>` | factories with build target |
+| Assemble (mine) | `assemble <id> mine <mine-unit> <quantity> <deposit-id>` | mines assigned to a deposit |
+| Move (in-system) | `move <id> orbit <orbit-ref>` | explicit destination kind |
+| Move (system jump) | `move <id> system <system-coords>` | explicit destination kind |
+| Draft | `draft <id> <population-kind> <quantity>` | v0 specialist drafting only |
+| Pay | `pay <id> <population-kind> <rate>` | integer rate |
+| Ration | `ration <id> <percent>` | bare integer, no `%` |
+| Name (ship) | `name ship <id> <name>` | |
+| Name (colony) | `name colony <id> <name>` | |
+| Name (planet) | `name planet <id> <name>` | numeric planet ID only |
 
 ### Setup
 
@@ -310,14 +289,14 @@ end
 Canonical form:
 
 ```text
-<id> build change <group-id> <build-target>
+build change <id> <group-id> <build-target>
 ```
 
 Examples:
 
 ```text
-16 build change 8 hyper-engine-1
-16 build change 9 consumer-goods
+build change 16 8 hyper-engine-1
+build change 16 9 consumer-goods
 ```
 
 Notes:
@@ -330,31 +309,27 @@ Notes:
 Canonical form:
 
 ```text
-<id> mining change <group-id> <deposit-id>
+mining change <id> <group-id> <deposit-id>
 ```
 
 Example:
 
 ```text
-348 mining change 18 92
+mining change 348 18 92
 ```
-
-Accepted alias:
-
-- `mining` may be accepted as a historical alias for `mining change`
 
 ### Transfer
 
 Canonical form:
 
 ```text
-<id> transfer <quantity> <unit-token> <id>
+transfer <source-id> <dest-id> <unit-token> <quantity>
 ```
 
 Example:
 
 ```text
-22 transfer 10 spy 29
+transfer 22 29 spy 10
 ```
 
 Rules:
@@ -364,60 +339,64 @@ Rules:
 
 ### Assemble
 
-Canonical forms:
+There are three assemble forms. The second token after the location ID determines which form is in use.
 
-Factory assembly:
+**Other form** — assembles generic units:
 
 ```text
-<id> assemble <quantity> <factory-unit> <build-target>
+assemble <id> <unit-token> <quantity>
 ```
 
-Mine assembly:
+**Factory form** — assembles factory units and configures their build target:
 
 ```text
-<id> assemble <quantity> <mine-unit> <deposit-id>
+assemble <id> factory <factory-unit> <quantity> <build-target>
 ```
 
-Other assembly:
+**Mine form** — assembles mine units assigned to a specific deposit:
 
 ```text
-<id> assemble <quantity> <unit-token>
+assemble <id> mine <mine-unit> <quantity> <deposit-id>
 ```
 
 Examples:
 
 ```text
-91 assemble 54000 factory-6 consumer-goods
-83 assemble 25680 mine-2 148
-58 assemble 6000 missile-launcher-1
+assemble 58 missile-launcher-1 6000
+assemble 58 missile-launcher-1 6,000
+assemble 91 factory factory-6 54000 hyper-engine-1
+assemble 91 factory factory-6 54,000 hyper-engine-1
+assemble 83 mine mine-2 25680 92
+assemble 83 mine mine-2 25,680 92
 ```
 
-Variant selection rules:
+Notes:
 
-- if the third field is a factory unit token, parse as factory assembly
-- if the third field is a mine unit token, parse as mine assembly
-- otherwise parse as other assembly
+- `factory` and `mine` on the second position are keyword discriminators, not unit tokens.
+- The factory form requires the factory unit to be a `factory-N` token; any other unit kind is rejected.
+- The mine form requires the mine unit to be a `mine-N` token; any other unit kind is rejected.
+- Quantities accept comma thousands-separators.
 
 ### Move
 
 In-system move:
 
 ```text
-<id> move orbit <orbit-ref>
+move <id> orbit <orbit-ref>
 ```
 
 System jump:
 
 ```text
-<id> move system <system-coords>
+move <id> system <system-coords>
 ```
 
 Examples:
 
 ```text
-77 move orbit 6
-88 move orbit c-4
-79 move system 4-6-19
+move 77 orbit 6
+move 88 orbit c-4
+move 79 system 4-6-19
 ```
 
 Notes:
@@ -430,15 +409,15 @@ Notes:
 Canonical form:
 
 ```text
-<id> draft <quantity> <population-kind>
+draft <id> <population-kind> <quantity>
 ```
 
 Examples:
 
 ```text
-13 draft 3600 soldier
-16 draft 400 professional
-16 draft 250 construction-worker
+draft 13 soldier 3600
+draft 16 professional 400
+draft 16 construction-worker 250
 ```
 
 v0 draft coverage:
@@ -451,20 +430,20 @@ v0 draft coverage:
 Canonical form:
 
 ```text
-<id> pay <rate> <population-kind>
+pay <id> <population-kind> <rate>
 ```
 
 Examples:
 
 ```text
-38 pay 0.125 unskilled-worker
-38 pay 0.375 professional
-38 pay 0.250 soldier
+pay 38 unskilled-worker 1
+pay 38 professional 5
+pay 38 soldier 4
 ```
 
 Parse-time rules:
 
-- rate must be a non-negative decimal with up to three fractional digits
+- rate must be a non-negative integer (game currency units per turn)
 - allowed population kinds: `unemployable`, `unskilled-worker`, `professional`, `soldier`, `spy`, `construction-worker`
 
 ### Ration
@@ -472,34 +451,41 @@ Parse-time rules:
 Canonical form:
 
 ```text
-<id> ration <percent>
+ration <id> <percent>
 ```
 
 Example:
 
 ```text
-16 ration 50%
+ration 16 50
 ```
 
 ### Name
 
-Ship/colony naming:
+Ship naming:
 
 ```text
-<id> name <name>
+name ship <id> <name>
+```
+
+Colony naming:
+
+```text
+name colony <id> <name>
 ```
 
 Planet naming:
 
 ```text
-<planet-ref> name <name>
+name planet <id> <name>
 ```
 
 Examples:
 
 ```text
-39 name "Dragonfire"
-5-12-38/2 name "Goldball Prime"
+name ship 39 "Dragonfire"
+name colony 7 "Outpost Beta"
+name planet 5 "New Terra"
 ```
 
 ## Non-MVP Commands
@@ -547,20 +533,18 @@ The domain model uses a small interface plus concrete order structs.
 
 ```text
 Order
-├── SetupOrder
+├── SetUpOrder
 ├── BuildChangeOrder
 ├── MiningChangeOrder
 ├── TransferOrder
-├── AssembleFactoryOrder
-├── AssembleMineOrder
-├── AssembleUnitsOrder
-├── MoveOrbitOrder
-├── MoveSystemOrder
+├── AssembleOrder          (other form)
+├── AssembleFactoryOrder   (factory form)
+├── AssembleMineOrder      (mine form)
+├── MoveOrder
 ├── DraftOrder
 ├── PayOrder
 ├── RationOrder
-├── NameObjectOrder
-└── NamePlanetOrder
+└── NameOrder
 ```
 
 ### Order interface
@@ -569,176 +553,124 @@ Order
 type OrderKind int
 
 type Order interface {
-    Kind()     OrderKind
-    Phase()    int
-    Validate() error
+    Kind()      OrderKind
+    TurnPhase() Phase
+    Validate()  error
 }
 ```
 
 ### Support types
 
 ```go
-// UnitSpec is a parsed unit reference with an optional tech level.
-type UnitSpec struct {
-    Kind         UnitKind
-    TechLevel    TechLevel
-    HasTechLevel bool
+// MoveDestination holds the raw parsed destination for a move order.
+// Full execution-time resolution requires the ship-location model from a later sprint.
+type MoveDestination struct {
+    Raw string // e.g. "orbit 6" or "system 4-6-19"
 }
 
-// SetupTransfer is one item line inside a setup block.
-type SetupTransfer struct {
-    Quantity int
-    Unit     UnitSpec
-}
+// NameTargetKind identifies what kind of entity a NameOrder renames.
+type NameTargetKind int
 
-// BuildTarget names the output of a factory group or factory assembly.
-// IsConsumerGoods is true when the text token was "consumer-goods";
-// otherwise Unit carries the target unit spec.
-type BuildTarget struct {
-    IsConsumerGoods bool
-    Unit            UnitSpec
-}
-
-// OrbitRef is a parsed orbit reference inside a system.
-// StarSequence is empty for a simple orbit number (e.g., "6").
-// For a star-qualified reference (e.g., "c-4"), StarSequence is "c".
-type OrbitRef struct {
-    StarSequence string // empty means primary star
-    Orbit        int    // 1..10
-}
-
-// PlanetRef identifies a specific planet by system coordinates and orbit.
-// Used for planet-naming orders.
-type PlanetRef struct {
-    Coords Coords
-    Orbit  OrbitRef
-}
-
-// PayRate is a wage rate stored as fixed-point thousandths of a gold unit.
-// 0.125 gold/turn is stored as 125.
-type PayRate int
+const (
+    NameTargetPlanet NameTargetKind = iota + 1
+    NameTargetShip
+    NameTargetColony
+)
 ```
 
 ### Concrete order structs
 
 ```go
-type SetupKind int
-
-const (
-    SetupShip   SetupKind = iota + 1
-    SetupColony
-)
-
-// SetupOrder — Phase 4
-type SetupOrder struct {
-    SetupKind SetupKind
-    SourceID  int           // existing ship or colony ID
-    Transfers []SetupTransfer
+// SetUpOrder — Phase 2
+type SetUpOrder struct {
+    ColonyID ColonyID
+    NewName  string
+    NewKind  UnitKind
 }
 
-// BuildChangeOrder — Phase 6
+// BuildChangeOrder — Phase 4
 type BuildChangeOrder struct {
-    SourceID int
-    GroupID  int
-    Target   BuildTarget
+    ColonyID       ColonyID
+    FactoryGroupID FactoryGroupID
+    NewUnitKind    UnitKind
 }
 
-// MiningChangeOrder — Phase 7
+// MiningChangeOrder — Phase 5
 type MiningChangeOrder struct {
-    SourceID  int
-    GroupID   int
-    DepositID int
+    ColonyID      ColonyID
+    MiningGroupID MiningGroupID
+    DepositID     DepositID
 }
 
 // TransferOrder — Phase 8
 type TransferOrder struct {
-    SourceID int
+    SourceID ColonyID
+    DestID   ColonyID
+    UnitKind UnitKind
     Quantity int
-    Unit     UnitSpec
-    TargetID int
 }
 
-// AssembleFactoryOrder — Phase 9
-// Assembles factory units into a factory group with a production target.
+// AssembleOrder — Phase 9 (other form)
+type AssembleOrder struct {
+    ColonyID ColonyID
+    UnitKind UnitKind
+    Quantity int
+}
+
+// AssembleFactoryOrder — Phase 9 (factory form)
 type AssembleFactoryOrder struct {
-    SourceID int
-    Quantity int
-    Unit     UnitSpec
-    Target   BuildTarget
+    LocationID  ColonyID
+    FactoryUnit UnitKind // must be Factory
+    FactoryQty  int
+    BuildTarget UnitKind
 }
 
-// AssembleMineOrder — Phase 9
-// Assembles mine units into a mining group assigned to a deposit.
+// AssembleMineOrder — Phase 9 (mine form)
 type AssembleMineOrder struct {
-    SourceID  int
-    Quantity  int
-    Unit      UnitSpec
-    DepositID int
+    LocationID ColonyID
+    MineUnit   UnitKind // must be Mine
+    MineQty    int
+    DepositID  DepositID
 }
 
-// AssembleUnitsOrder — Phase 9
-// Assembles any other unit type (drives, life support, weapons, etc.).
-type AssembleUnitsOrder struct {
-    SourceID int
-    Quantity int
-    Unit     UnitSpec
-}
-
-// MoveOrbitOrder — Phase 14
-// In-system jump to a different orbit around the same star.
-type MoveOrbitOrder struct {
-    ShipID      int
-    Destination OrbitRef
-}
-
-// MoveSystemOrder — Phase 14
-// Inter-system jump to the named system coordinates.
-type MoveSystemOrder struct {
-    ShipID      int
-    Destination Coords
+// MoveOrder — Phase 12
+type MoveOrder struct {
+    ShipID      ShipID
+    Destination MoveDestination
 }
 
 // DraftOrder — Phase 15
 type DraftOrder struct {
-    SourceID   int
-    Quantity   int
-    Population UnitKind // must be a draftable population kind
+    ColonyID ColonyID
+    PopKind  UnitKind
+    Quantity int
 }
 
 // PayOrder — Phase 16
 type PayOrder struct {
-    SourceID   int
-    Rate       PayRate
-    Population UnitKind // must be a payable population kind
+    ColonyID ColonyID
+    PopKind  UnitKind
+    Wage     int // non-negative integer; 0 means no pay
 }
 
-// RationOrder — Phase 16
+// RationOrder — Phase 17
 type RationOrder struct {
-    SourceID int
-    Percent  int // 0..100
+    ColonyID         ColonyID
+    RationPercentage int // 0..100
 }
 
-// NameObjectOrder — Phase 19
-// Names a ship or colony referenced by integer ID.
-type NameObjectOrder struct {
-    ObjectID int
-    Name     string
-}
-
-// NamePlanetOrder — Phase 19
-// Names a planet referenced by system coordinates and orbit.
-type NamePlanetOrder struct {
-    Planet PlanetRef
-    Name   string
+// NameOrder — Phase 21
+type NameOrder struct {
+    TargetKind NameTargetKind
+    TargetID   int // PlanetID, ShipID, or ColonyID depending on TargetKind
+    NewName    string
 }
 ```
 
 Design notes:
 
-- `MoveOrbitOrder` and `MoveSystemOrder` are separate concrete types so the parser does not need a destination sum-type at every call site.
-- `NameObjectOrder` and `NamePlanetOrder` are separate so object-ID naming (ships and colonies) and planet-location naming stay unambiguous.
-- `SetupOrder` captures the full transfer list so execution can verify materials without re-parsing.
-- `PayRate` is fixed-point thousandths rather than `float64` to avoid floating-point comparison issues in validation and execution.
+- `MoveOrder` carries a raw destination string (`orbit 6`, `system 4-6-19`). Full parsing into orbit and system types is deferred until the ship-location model is defined in a later sprint.
+- `NameOrder` uses an explicit `TargetKind` field so ship, colony, and planet naming are unambiguous without splitting into separate types.
 - The domain model preserves execution-relevant data only. Line numbers belong in app-layer diagnostics.
 
 ## Parse-Time Validation
@@ -802,7 +734,6 @@ Stable diagnostic codes:
 | `syntax` | the command is recognized, but the field count or clause layout is wrong |
 | `invalid_value` | a field is present but fails static validation |
 | `unterminated_quote` | a quoted field is not closed before end of line |
-| `unterminated_setup` | EOF reached before `end` closed a `setup` block |
 | `unexpected_end` | `end` appeared outside an open `setup` block |
 
 Diagnostic rules:
@@ -820,16 +751,16 @@ can group by phase without reparsing.
 
 | Order | Phase |
 |---|---|
-| Set up | 4 |
-| Build Change | 6 |
-| Mining Change | 7 |
+| Set up | 2 |
+| Build Change | 4 |
+| Mining Change | 5 |
 | Transfer | 8 |
-| Assemble (all variants) | 9 |
-| Move (both variants) | 14 |
+| Assemble | 9 |
+| Move | 12 |
 | Draft | 15 |
 | Pay | 16 |
-| Ration | 16 |
-| Name (both variants) | 19 |
+| Ration | 17 |
+| Name | 21 |
 
 Parse-time does not require players to submit orders in phase order. Input order is
 preserved, but phase assignment is explicit on the typed order values.
