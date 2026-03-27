@@ -94,6 +94,29 @@ Everything else in v0 exists to support that goal.
 
 ---
 
+## Suggested Sprint Sequence (12+)
+
+This is a default Sprint 12+ sequence that keeps each sprint on a single dependency layer and pushes UI work behind stable backend data. It is meant to reduce planning overhead, not lock future sprint boundaries.
+
+| Sprint | Focus | Suggested slice | Exit criteria |
+|--------|-------|-----------------|---------------|
+| 12 | MVP order language | Write the MVP order design doc, define the `domain.Order` hierarchy, implement parse-time validation for MVP orders, and reject non-MVP orders with clear not-yet-implemented errors. | Submitted orders can be parsed into structured domain values with deterministic validation results. |
+| 13 | Turn engine foundation | Add sequence counters, create the 21-phase turn pipeline, and wire parsed orders into turn execution with stub/no-op phases where needed. | A turn can run end-to-end through all phases without relying on `len(slice) + 1`, even though most phases still do little or nothing. |
+| 14 | Colony economy loop | Implement Build Change, Mining Change, Draft, Pay, Ration, and automatic phase 1/2 production. | A colony can redirect production, staff specialists, stay fed/paid, and accumulate output in inventory across turns. |
+| 15 | Logistics and assembly | Implement Transfer plus all MVP Assemble variants, including inventory mutations between ground/orbital colonies and assembled group creation. | Produced units can move to the correct location and be converted from inventory items into assembled groups. |
+| 16 | Ship creation and movement | Resolve the ship orbit model, implement Set up, Name, Move in-system, and Move system jump. | A player can create a named ship in orbit and move it within a system or to another reachable system. |
+| 17 | Close the player loop | Implement report generation, finish the Orders page parse/submit flow, and upgrade Colonies, Colony detail, Ships, and Ship detail to use real backend data. | The core loop works end-to-end: submit orders, process a turn, read reports, and inspect colonies/ships in the UI. |
+| 18 | Sensor views and v0 finish work | Add Systems/Planets pages and detail views, expose visited-system sensor data, implement inactive-empire automation, and publish docs that match shipped behavior. | Remaining MVP-facing pages are usable, independent-nation behavior exists, and docs match the implementation. |
+
+### Notes on the cut
+
+- Sprint 16 intentionally pulls the ship orbit model alongside Set up and Move so the location-model change lands in the sprint that first needs it.
+- Sprint 17 is the first sprint that should treat the game as player-playable end-to-end.
+- Shared UI components and page routing stay trigger-based; do them only if Sprint 17 or Sprint 18 creates enough duplication or navigation pain to justify the change.
+- SQLite is intentionally not assigned to a sprint here. Treat it as a trigger-based infrastructure change after order parsing and turn persistence make the file store painful.
+
+---
+
 ## Frontend Rollout
 
 - React + Vite player interface (scaffolded — Sprint 2; not feature-complete)
