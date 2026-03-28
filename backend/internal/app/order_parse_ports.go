@@ -12,13 +12,13 @@ type OrderParser interface {
 
 // ParseDiagnostic describes a parse error or warning for a single input line.
 type ParseDiagnostic struct {
-	Line    int    `json:"line"`
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Line    int
+	Code    string
+	Message string
 }
 
 // ParseResult holds the outcome of a parse pass.
 type ParseResult struct {
-	Orders      []domain.Order   `json:"-"`
-	Diagnostics []ParseDiagnostic `json:"diagnostics"`
+	Orders      []domain.Order
+	Diagnostics []ParseDiagnostic
 }

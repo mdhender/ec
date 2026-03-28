@@ -50,14 +50,14 @@ pay <id> <population-kind> <rate>
 |---|---|
 | `<id>` | Colony ID. Must be a positive integer. |
 | `<population-kind>` | Population kind to set wages for. Accepted values: `unemployable`, `unskilled-worker`, `professional`, `soldier`, `spy`, `construction-worker`. |
-| `<rate>` | Wage rate in gold per turn. A non-negative integer. |
+| `<rate>` | Wage rate in gold per turn. A non-negative decimal with up to three fractional digits. |
 
 **Examples**
 
 ```text
-pay 38 unskilled-worker 1
-pay 38 professional 5
-pay 38 soldier 4
+pay 38 unskilled-worker 0.125
+pay 38 professional 0.375
+pay 38 soldier 0.250
 ```
 
 ---
@@ -77,12 +77,12 @@ ration <id> <percent>
 | Parameter | Description |
 |---|---|
 | `<id>` | Colony ID. Must be a positive integer. |
-| `<percent>` | Ration level as an integer in the range `0`–`100`. |
+| `<percent>` | Ration level as an integer followed by `%`, in the range `0`–`100`. |
 
 **Example**
 
 ```text
-ration 16 50
+ration 16 50%
 ```
 
 ---

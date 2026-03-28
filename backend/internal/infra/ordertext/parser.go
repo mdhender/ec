@@ -123,7 +123,7 @@ func parseBuildChange(lineNum int, rest []string) (domain.Order, *app.ParseDiagn
 		return nil, badValue(lineNum, fmt.Sprintf("build change: invalid group number %q: %v", rest[1], err)), nil
 	}
 
-	unitKind, err := parseUnitKind(rest[2])
+	unitSpec, err := parseUnitKind(rest[2])
 	if err != nil {
 		return nil, badValue(lineNum, fmt.Sprintf("build change: invalid unit kind %q", rest[2])), nil
 	}
@@ -132,7 +132,7 @@ func parseBuildChange(lineNum int, rest []string) (domain.Order, *app.ParseDiagn
 		OrderKind:      domain.OrderKindBuildChange,
 		ColonyID:       domain.ColonyID(colonyID),
 		FactoryGroupID: domain.FactoryGroupID(groupNo),
-		NewUnitKind:    unitKind,
+		NewUnit:        unitSpec,
 	}
 	if err := o.Validate(); err != nil {
 		return nil, badValue(lineNum, err.Error()), nil
@@ -194,7 +194,7 @@ func parseTransfer(lineNum int, rest []string) (domain.Order, *app.ParseDiagnost
 		return nil, badValue(lineNum, fmt.Sprintf("transfer: invalid destination ID %q: %v", rest[1], err)), nil
 	}
 
-	unitKind, err := parseUnitKind(rest[2])
+	unitSpec, err := parseUnitKind(rest[2])
 	if err != nil {
 		return nil, badValue(lineNum, fmt.Sprintf("transfer: invalid unit kind %q", rest[2])), nil
 	}
@@ -208,7 +208,7 @@ func parseTransfer(lineNum int, rest []string) (domain.Order, *app.ParseDiagnost
 		OrderKind: domain.OrderKindTransfer,
 		SourceID:  domain.ColonyID(sourceID),
 		DestID:    domain.ColonyID(destID),
-		UnitKind:  unitKind,
+		Unit:      unitSpec,
 		Quantity:  quantity,
 	}
 	if err := o.Validate(); err != nil {
@@ -249,7 +249,7 @@ func parseAssembleOther(lineNum int, locationID int, rest []string) (domain.Orde
 		return nil, badSyntax(lineNum, "assemble requires <locationID> <unit> <qty>"), nil
 	}
 
-	unitKind, err := parseUnitKind(rest[0])
+	unitSpec, err := parseUnitKind(rest[0])
 	if err != nil {
 		return nil, badValue(lineNum, fmt.Sprintf("assemble: invalid unit kind %q: %v", rest[0], err)), nil
 	}
@@ -262,7 +262,7 @@ func parseAssembleOther(lineNum int, locationID int, rest []string) (domain.Orde
 	o := domain.AssembleOrder{
 		OrderKind: domain.OrderKindAssemble,
 		ColonyID:  domain.ColonyID(locationID),
-		UnitKind:  unitKind,
+		Unit:      unitSpec,
 		Quantity:  quantity,
 	}
 	if err := o.Validate(); err != nil {
@@ -281,6 +281,9 @@ func parseAssembleFactory(lineNum int, locationID int, rest []string) (domain.Or
 	factoryUnit, err := parseUnitKind(rest[0])
 	if err != nil {
 		return nil, badValue(lineNum, fmt.Sprintf("assemble factory: invalid factory unit %q: %v", rest[0], err)), nil
+	}
+	if factoryUnit.Kind != domain.Factory {
+		return nil, badValue(lineNum, fmt.Sprintf("assemble factory: unit %q is not a factory", rest[0])), nil
 	}
 
 	quantity, err := parseQuantity(rest[1])
@@ -316,6 +319,9 @@ func parseAssembleMine(lineNum int, locationID int, rest []string) (domain.Order
 	mineUnit, err := parseUnitKind(rest[0])
 	if err != nil {
 		return nil, badValue(lineNum, fmt.Sprintf("assemble mine: invalid mine unit %q: %v", rest[0], err)), nil
+	}
+	if mineUnit.Kind != domain.Mine {
+		return nil, badValue(lineNum, fmt.Sprintf("assemble mine: unit %q is not a mine", rest[0])), nil
 	}
 
 	quantity, err := parseQuantity(rest[1])
@@ -375,7 +381,7 @@ func parseDraft(lineNum int, rest []string) (domain.Order, *app.ParseDiagnostic,
 		return nil, badValue(lineNum, fmt.Sprintf("draft: invalid colony ID %q: %v", rest[0], err)), nil
 	}
 
-	popKind, err := parseUnitKind(rest[1])
+	popSpec, err := parseUnitKind(rest[1])
 	if err != nil {
 		return nil, badValue(lineNum, fmt.Sprintf("draft: invalid population kind %q", rest[1])), nil
 	}
@@ -388,7 +394,7 @@ func parseDraft(lineNum int, rest []string) (domain.Order, *app.ParseDiagnostic,
 	o := domain.DraftOrder{
 		OrderKind: domain.OrderKindDraft,
 		ColonyID:  domain.ColonyID(colonyID),
-		PopKind:   popKind,
+		PopKind:   popSpec.Kind,
 		Quantity:  quantity,
 	}
 	if err := o.Validate(); err != nil {
@@ -408,20 +414,20 @@ func parsePay(lineNum int, rest []string) (domain.Order, *app.ParseDiagnostic, e
 		return nil, badValue(lineNum, fmt.Sprintf("pay: invalid colony ID %q: %v", rest[0], err)), nil
 	}
 
-	popKind, err := parseUnitKind(rest[1])
+	popSpec, err := parseUnitKind(rest[1])
 	if err != nil {
 		return nil, badValue(lineNum, fmt.Sprintf("pay: invalid population kind %q", rest[1])), nil
 	}
 
-	amount, err := parseNonNegativeInt(rest[2])
+	amount, err := parsePayRate(rest[2])
 	if err != nil {
-		return nil, badValue(lineNum, fmt.Sprintf("pay: invalid wage amount %q: %v", rest[2], err)), nil
+		return nil, badValue(lineNum, fmt.Sprintf("pay: invalid pay rate %q: %v", rest[2], err)), nil
 	}
 
 	o := domain.PayOrder{
 		OrderKind: domain.OrderKindPay,
 		ColonyID:  domain.ColonyID(colonyID),
-		PopKind:   popKind,
+		PopKind:   popSpec.Kind,
 		Wage:      amount,
 	}
 	if err := o.Validate(); err != nil {
@@ -501,7 +507,7 @@ func parseNameByKind(lineNum int, rest []string) (domain.Order, *app.ParseDiagno
 }
 
 func parsePositiveInt(s string) (int, error) {
-	n, err := strconv.Atoi(s)
+	n, err := strconv.Atoi(strings.ReplaceAll(s, ",", ""))
 	if err != nil {
 		return 0, fmt.Errorf("not an integer")
 	}
@@ -511,14 +517,12 @@ func parsePositiveInt(s string) (int, error) {
 	return n, nil
 }
 
-// parseQuantity strips comma thousands-separators then parses as a positive integer.
-// "54,000" and "54000" are equivalent.
 func parseQuantity(s string) (int, error) {
-	return parsePositiveInt(strings.ReplaceAll(s, ",", ""))
+	return parsePositiveInt(s)
 }
 
 func parseNonNegativeInt(s string) (int, error) {
-	n, err := strconv.Atoi(s)
+	n, err := strconv.Atoi(strings.ReplaceAll(s, ",", ""))
 	if err != nil {
 		return 0, fmt.Errorf("not an integer")
 	}
@@ -529,6 +533,7 @@ func parseNonNegativeInt(s string) (int, error) {
 }
 
 func parsePercentage(s string) (int, error) {
+	s = strings.TrimSuffix(s, "%")
 	n, err := strconv.Atoi(s)
 	if err != nil {
 		return 0, fmt.Errorf("not an integer")
@@ -537,6 +542,43 @@ func parsePercentage(s string) (int, error) {
 		return 0, fmt.Errorf("percentage must be 0–100, got %d", n)
 	}
 	return n, nil
+}
+
+// parsePayRate parses a decimal literal with up to 3 fractional digits and
+// returns it as fixed-point thousandths. "0.125" → 125, "1.600" → 1600, "5" → 5000.
+func parsePayRate(s string) (int, error) {
+	parts := strings.SplitN(s, ".", 2)
+	if len(parts) == 1 {
+		// bare integer
+		n, err := strconv.Atoi(s)
+		if err != nil {
+			return 0, fmt.Errorf("not a number")
+		}
+		if n < 0 {
+			return 0, fmt.Errorf("must be non-negative, got %d", n)
+		}
+		return n * 1000, nil
+	}
+	whole, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, fmt.Errorf("not a number")
+	}
+	if whole < 0 {
+		return 0, fmt.Errorf("must be non-negative")
+	}
+	frac := parts[1]
+	if len(frac) == 0 || len(frac) > 3 {
+		return 0, fmt.Errorf("fractional part must be 1–3 digits")
+	}
+	// pad to 3 digits
+	for len(frac) < 3 {
+		frac += "0"
+	}
+	fracN, err := strconv.Atoi(frac)
+	if err != nil {
+		return 0, fmt.Errorf("invalid fractional part")
+	}
+	return whole*1000 + fracN, nil
 }
 
 // unitEntry records the domain kind for a canonical base token and whether a
@@ -601,21 +643,21 @@ var unitRegistry = map[string]unitEntry{
 // parseUnitKind parses a unit token such as "factory-6" or "professional".
 // Equipment units require a "-N" tech-level suffix (e.g. factory-6, hyper-engine-1).
 // Population and commodity units must not carry a tech-level suffix.
-func parseUnitKind(s string) (domain.UnitKind, error) {
+func parseUnitKind(s string) (domain.UnitSpec, error) {
 	base, techLevel := splitTechLevel(strings.ToLower(s))
 	hasTech := techLevel > 0
 
 	entry, ok := unitRegistry[base]
 	if !ok {
-		return 0, fmt.Errorf("unknown unit kind %q", s)
+		return domain.UnitSpec{}, fmt.Errorf("unknown unit kind %q", s)
 	}
 	if entry.requiresTech && !hasTech {
-		return 0, fmt.Errorf("%q requires a tech-level suffix (e.g. %s-1)", s, base)
+		return domain.UnitSpec{}, fmt.Errorf("%q requires a tech-level suffix (e.g. %s-1)", s, base)
 	}
 	if !entry.requiresTech && hasTech {
-		return 0, fmt.Errorf("%q does not use a tech-level suffix", s)
+		return domain.UnitSpec{}, fmt.Errorf("%q does not use a tech-level suffix", s)
 	}
-	return entry.kind, nil
+	return domain.UnitSpec{Kind: entry.kind, TechLevel: domain.TechLevel(techLevel)}, nil
 }
 
 // splitTechLevel splits a trailing "-<positive-integer>" suffix from s.

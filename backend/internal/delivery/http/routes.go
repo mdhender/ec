@@ -8,21 +8,36 @@ import (
 	"github.com/mdhender/ec/internal/app"
 )
 
+// RouteDeps holds all dependencies needed to register API routes.
+type RouteDeps struct {
+	Echo            *echo.Echo
+	JWTMiddleware   echo.MiddlewareFunc
+	EmpireExtractor EmpireExtractor
+	TokenValidator  TokenValidator
+	LoginSvc        *app.LoginService
+	OrderStore      app.OrderStore
+	ReportStore     app.ReportStore
+	DashboardStore  app.DashboardStore
+	ShutdownKey     string
+	ShutdownCh      chan struct{}
+	MaxOrderBytes   int64
+	ParseOrdersSvc  *app.ParseOrdersService
+}
+
 // AddRoutes registers all API routes on the given Echo instance.
-func AddRoutes(
-	e *echo.Echo,
-	jwtMiddleware echo.MiddlewareFunc,
-	empireExtractor EmpireExtractor,
-	tokenValidator TokenValidator,
-	loginSvc *app.LoginService,
-	orderStore app.OrderStore,
-	reportStore app.ReportStore,
-	dashboardStore app.DashboardStore,
-	shutdownKey string,
-	shutdownCh chan struct{},
-	maxOrderBytes int64,
-	parseOrdersSvc *app.ParseOrdersService,
-) {
+func AddRoutes(deps RouteDeps) {
+	e := deps.Echo
+	jwtMiddleware := deps.JWTMiddleware
+	empireExtractor := deps.EmpireExtractor
+	tokenValidator := deps.TokenValidator
+	loginSvc := deps.LoginSvc
+	orderStore := deps.OrderStore
+	reportStore := deps.ReportStore
+	dashboardStore := deps.DashboardStore
+	shutdownKey := deps.ShutdownKey
+	shutdownCh := deps.ShutdownCh
+	maxOrderBytes := deps.MaxOrderBytes
+	parseOrdersSvc := deps.ParseOrdersSvc
 	// Public routes
 	e.GET("/api/health", GetHealth())
 	e.GET("/api/me", GetMe(tokenValidator))

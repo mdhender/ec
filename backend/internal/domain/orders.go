@@ -20,6 +20,10 @@ const (
 	OrderKindName
 )
 
+func (k OrderKind) Valid() bool {
+	return k >= OrderKindSetUp && k <= OrderKindName
+}
+
 func (k OrderKind) String() string {
 	switch k {
 	case OrderKindSetUp:
@@ -50,17 +54,28 @@ func (k OrderKind) String() string {
 // Phase is the turn phase number (1–21) in which an order executes.
 type Phase int
 
+func (p Phase) Valid() bool {
+	switch p {
+	case PhaseSetUp, PhaseBuildChange, PhaseMiningChange, PhaseTransfer,
+		PhaseAssemble, PhaseMove, PhaseDraft, PhasePay, PhaseName:
+		// PhaseRation is omitted because it equals PhasePay (both 16).
+		return true
+	default:
+		return false
+	}
+}
+
 const (
-	PhaseSetUp        Phase = 2
-	PhaseBuildChange  Phase = 4
-	PhaseMiningChange Phase = 5
+	PhaseSetUp        Phase = 4
+	PhaseBuildChange  Phase = 6
+	PhaseMiningChange Phase = 7
 	PhaseTransfer     Phase = 8
 	PhaseAssemble     Phase = 9
-	PhaseMove         Phase = 12
+	PhaseMove         Phase = 14
 	PhaseDraft        Phase = 15
 	PhasePay          Phase = 16
-	PhaseRation       Phase = 17
-	PhaseName         Phase = 21
+	PhaseRation       Phase = 16
+	PhaseName         Phase = 19
 )
 
 // NameTargetKind identifies what kind of entity a NameOrder renames.
@@ -71,6 +86,10 @@ const (
 	NameTargetShip
 	NameTargetColony
 )
+
+func (k NameTargetKind) Valid() bool {
+	return k >= NameTargetPlanet && k <= NameTargetColony
+}
 
 func (k NameTargetKind) String() string {
 	switch k {
@@ -103,7 +122,7 @@ type SetUpOrder struct {
 	OrderKind OrderKind
 	ColonyID  ColonyID // source colony funding the set-up
 	NewName   string
-	NewKind   UnitKind
+	NewKind   UnitSpec
 }
 
 func (o SetUpOrder) Kind() OrderKind  { return o.OrderKind }
@@ -119,7 +138,7 @@ func (o SetUpOrder) Validate() error {
 	if o.NewName == "" {
 		return errors.New("set-up order: new name must not be empty")
 	}
-	if o.NewKind <= 0 {
+	if !o.NewKind.Kind.Valid() {
 		return errors.New("set-up order: new unit kind must be valid")
 	}
 	return nil
@@ -130,7 +149,7 @@ type BuildChangeOrder struct {
 	OrderKind      OrderKind
 	ColonyID       ColonyID
 	FactoryGroupID FactoryGroupID
-	NewUnitKind    UnitKind
+	NewUnit        UnitSpec
 }
 
 func (o BuildChangeOrder) Kind() OrderKind  { return o.OrderKind }
@@ -146,7 +165,7 @@ func (o BuildChangeOrder) Validate() error {
 	if o.FactoryGroupID <= 0 {
 		return errors.New("build-change order: factory group ID must be positive")
 	}
-	if o.NewUnitKind <= 0 {
+	if !o.NewUnit.Kind.Valid() {
 		return errors.New("build-change order: new unit kind must be valid")
 	}
 	return nil
@@ -184,7 +203,7 @@ type TransferOrder struct {
 	OrderKind OrderKind
 	SourceID  ColonyID
 	DestID    ColonyID
-	UnitKind  UnitKind
+	Unit      UnitSpec
 	Quantity  int
 }
 
@@ -201,7 +220,7 @@ func (o TransferOrder) Validate() error {
 	if o.DestID <= 0 {
 		return errors.New("transfer order: destination ID must be positive")
 	}
-	if o.UnitKind <= 0 {
+	if !o.Unit.Kind.Valid() {
 		return errors.New("transfer order: unit kind must be valid")
 	}
 	if o.Quantity <= 0 {
@@ -215,7 +234,7 @@ func (o TransferOrder) Validate() error {
 type AssembleOrder struct {
 	OrderKind OrderKind
 	ColonyID  ColonyID
-	UnitKind  UnitKind
+	Unit      UnitSpec
 	Quantity  int
 }
 
@@ -229,7 +248,7 @@ func (o AssembleOrder) Validate() error {
 	if o.ColonyID <= 0 {
 		return errors.New("assemble order: colony ID must be positive")
 	}
-	if o.UnitKind <= 0 {
+	if !o.Unit.Kind.Valid() {
 		return errors.New("assemble order: unit kind must be valid")
 	}
 	if o.Quantity <= 0 {
@@ -243,9 +262,9 @@ func (o AssembleOrder) Validate() error {
 type AssembleFactoryOrder struct {
 	OrderKind   OrderKind
 	LocationID  ColonyID
-	FactoryUnit UnitKind // must be Factory
+	FactoryUnit UnitSpec // must be Factory
 	FactoryQty  int
-	BuildTarget UnitKind
+	BuildTarget UnitSpec
 }
 
 func (o AssembleFactoryOrder) Kind() OrderKind  { return o.OrderKind }
@@ -258,13 +277,13 @@ func (o AssembleFactoryOrder) Validate() error {
 	if o.LocationID <= 0 {
 		return errors.New("assemble-factory order: location ID must be positive")
 	}
-	if o.FactoryUnit != Factory {
+	if o.FactoryUnit.Kind != Factory {
 		return errors.New("assemble-factory order: factory unit must be a factory")
 	}
 	if o.FactoryQty <= 0 {
 		return errors.New("assemble-factory order: factory quantity must be positive")
 	}
-	if o.BuildTarget <= 0 {
+	if !o.BuildTarget.Kind.Valid() {
 		return errors.New("assemble-factory order: build target must be valid")
 	}
 	return nil
@@ -275,7 +294,7 @@ func (o AssembleFactoryOrder) Validate() error {
 type AssembleMineOrder struct {
 	OrderKind  OrderKind
 	LocationID ColonyID
-	MineUnit   UnitKind // must be Mine
+	MineUnit   UnitSpec // must be Mine
 	MineQty    int
 	DepositID  DepositID
 }
@@ -290,7 +309,7 @@ func (o AssembleMineOrder) Validate() error {
 	if o.LocationID <= 0 {
 		return errors.New("assemble-mine order: location ID must be positive")
 	}
-	if o.MineUnit != Mine {
+	if o.MineUnit.Kind != Mine {
 		return errors.New("assemble-mine order: mine unit must be a mine")
 	}
 	if o.MineQty <= 0 {
@@ -343,7 +362,7 @@ func (o DraftOrder) Validate() error {
 	if o.ColonyID <= 0 {
 		return errors.New("draft order: colony ID must be positive")
 	}
-	if o.PopKind <= 0 {
+	if !o.PopKind.Valid() {
 		return errors.New("draft order: population kind must be valid")
 	}
 	if o.Quantity <= 0 {
@@ -370,7 +389,7 @@ func (o PayOrder) Validate() error {
 	if o.ColonyID <= 0 {
 		return errors.New("pay order: colony ID must be positive")
 	}
-	if o.PopKind <= 0 {
+	if !o.PopKind.Valid() {
 		return errors.New("pay order: population kind must be valid")
 	}
 	if o.Wage < 0 {
@@ -417,7 +436,7 @@ func (o NameOrder) Validate() error {
 	if o.OrderKind != OrderKindName {
 		return errors.New("name order: invalid order kind")
 	}
-	if o.TargetKind <= 0 {
+	if !o.TargetKind.Valid() {
 		return errors.New("name order: target kind must be valid")
 	}
 	if o.TargetID <= 0 {

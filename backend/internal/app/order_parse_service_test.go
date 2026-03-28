@@ -32,9 +32,7 @@ func (p *stubParser) Parse(_ string) ([]domain.Order, []app.ParseDiagnostic, err
 }
 
 func TestParseOrdersService_EmptyInput(t *testing.T) {
-	svc := &app.ParseOrdersService{
-		Parser: &stubParser{},
-	}
+	svc := app.NewParseOrdersService(&stubParser{})
 
 	result, err := svc.Parse("")
 	if err != nil {
@@ -57,12 +55,10 @@ func TestParseOrdersService_ReturnsOrdersAndDiagnostics(t *testing.T) {
 		{Line: 3, Code: "E001", Message: "unknown order keyword"},
 	}
 
-	svc := &app.ParseOrdersService{
-		Parser: &stubParser{
-			orders:      orders,
-			diagnostics: diagnostics,
-		},
-	}
+	svc := app.NewParseOrdersService(&stubParser{
+		orders:      orders,
+		diagnostics: diagnostics,
+	})
 
 	result, err := svc.Parse("some order text")
 	if err != nil {
@@ -89,9 +85,7 @@ func TestParseOrdersService_ReturnsOrdersAndDiagnostics(t *testing.T) {
 func TestParseOrdersService_PropagatesParserFailure(t *testing.T) {
 	parserErr := errors.New("unexpected internal parser failure")
 
-	svc := &app.ParseOrdersService{
-		Parser: &stubParser{err: parserErr},
-	}
+	svc := app.NewParseOrdersService(&stubParser{err: parserErr})
 
 	_, err := svc.Parse("some order text")
 	if err == nil {

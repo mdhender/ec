@@ -50,8 +50,8 @@ The v0 parser accepts a scrubbed, whitespace-oriented order language.
 Example:
 
 ```text
-77 move orbit 6 // move the scout inward
-39 name "Slash // Burn"
+move 77 orbit 6 // move the scout inward
+name ship 39 "Slash // Burn"
 ```
 
 ### Quoted strings
@@ -239,19 +239,19 @@ The historical `research` and `retool` targets are recognized but treated as
 | Command | Canonical form | Notes |
 |---|---|---|
 | Set up | `setup ... end` | only multi-line order |
-| Build Change | `<id> build change <group-id> <build-target>` | historical alias `build-change` not required |
-| Mining Change | `<id> mining change <group-id> <deposit-id>` | historical alias `mining` may be accepted |
-| Transfer | `<id> transfer <quantity> <unit-token> <id>` | one item per order |
-| Assemble (factory) | `<id> assemble <quantity> <factory-unit> <build-target>` | determined by first unit token |
-| Assemble (mine) | `<id> assemble <quantity> <mine-unit> <deposit-id>` | determined by first unit token |
-| Assemble (other) | `<id> assemble <quantity> <unit-token>` | all other assembly |
-| Move (in-system) | `<id> move orbit <orbit-ref>` | explicit destination kind |
-| Move (system jump) | `<id> move system <system-coords>` | explicit destination kind |
-| Draft | `<id> draft <quantity> <population-kind>` | v0 specialist drafting only |
-| Pay | `<id> pay <rate> <population-kind>` | fixed-point decimal |
-| Ration | `<id> ration <percent>` | integer percentage |
-| Name (ship/colony) | `<id> name <name>` | quoted name required |
-| Name (planet) | `<planet-ref> name <name>` | quoted name required |
+| Build Change | `build change <id> <group-id> <build-target>` | historical alias `build-change` not required |
+| Mining Change | `mining change <id> <group-id> <deposit-id>` | historical alias `mining` may be accepted |
+| Transfer | `transfer <id> <id> <unit-token> <quantity>` | one item per order |
+| Assemble (factory) | `assemble <id> factory <factory-unit> <quantity> <build-target>` | determined by second token after ID |
+| Assemble (mine) | `assemble <id> mine <mine-unit> <quantity> <deposit-id>` | determined by second token after ID |
+| Assemble (other) | `assemble <id> <unit-token> <quantity>` | all other assembly |
+| Move (in-system) | `move <id> orbit <orbit-ref>` | explicit destination kind |
+| Move (system jump) | `move <id> system <system-coords>` | explicit destination kind |
+| Draft | `draft <id> <population-kind> <quantity>` | v0 specialist drafting only |
+| Pay | `pay <id> <population-kind> <rate>` | fixed-point decimal |
+| Ration | `ration <id> <percent>` | integer percentage |
+| Name (ship/colony) | `name ship\|colony <id> <name>` | quoted name required |
+| Name (planet) | `name planet <id> <name>` | quoted name required |
 
 ### Setup
 
@@ -305,14 +305,14 @@ end
 Canonical form:
 
 ```text
-<id> build change <group-id> <build-target>
+build change <id> <group-id> <build-target>
 ```
 
 Examples:
 
 ```text
-16 build change 8 hyper-engine-1
-16 build change 9 consumer-goods
+build change 16 8 hyper-engine-1
+build change 16 9 consumer-goods
 ```
 
 Notes:
@@ -325,13 +325,13 @@ Notes:
 Canonical form:
 
 ```text
-<id> mining change <group-id> <deposit-id>
+mining change <id> <group-id> <deposit-id>
 ```
 
 Example:
 
 ```text
-348 mining change 18 92
+mining change 348 18 92
 ```
 
 Accepted alias:
@@ -343,13 +343,13 @@ Accepted alias:
 Canonical form:
 
 ```text
-<id> transfer <quantity> <unit-token> <id>
+transfer <id> <id> <unit-token> <quantity>
 ```
 
 Example:
 
 ```text
-22 transfer 10 spy 29
+transfer 22 29 spy 10
 ```
 
 Rules:
@@ -364,33 +364,33 @@ Canonical forms:
 Factory assembly:
 
 ```text
-<id> assemble <quantity> <factory-unit> <build-target>
+assemble <id> factory <factory-unit> <quantity> <build-target>
 ```
 
 Mine assembly:
 
 ```text
-<id> assemble <quantity> <mine-unit> <deposit-id>
+assemble <id> mine <mine-unit> <quantity> <deposit-id>
 ```
 
 Other assembly:
 
 ```text
-<id> assemble <quantity> <unit-token>
+assemble <id> <unit-token> <quantity>
 ```
 
 Examples:
 
 ```text
-91 assemble 54000 factory-6 consumer-goods
-83 assemble 25680 mine-2 148
-58 assemble 6000 missile-launcher-1
+assemble 91 factory factory-6 54000 consumer-goods
+assemble 83 mine mine-2 25680 148
+assemble 58 missile-launcher-1 6000
 ```
 
 Variant selection rules:
 
-- if the third field is a factory unit token, parse as factory assembly
-- if the third field is a mine unit token, parse as mine assembly
+- if the second token after the location ID is `factory`, parse as factory assembly
+- if the second token after the location ID is `mine`, parse as mine assembly
 - otherwise parse as other assembly
 
 ### Move
@@ -398,21 +398,21 @@ Variant selection rules:
 In-system move:
 
 ```text
-<id> move orbit <orbit-ref>
+move <id> orbit <orbit-ref>
 ```
 
 System jump:
 
 ```text
-<id> move system <system-coords>
+move <id> system <system-coords>
 ```
 
 Examples:
 
 ```text
-77 move orbit 6
-88 move orbit c-4
-79 move system 4-6-19
+move 77 orbit 6
+move 88 orbit c-4
+move 79 system 4-6-19
 ```
 
 Notes:
@@ -425,15 +425,15 @@ Notes:
 Canonical form:
 
 ```text
-<id> draft <quantity> <population-kind>
+draft <id> <population-kind> <quantity>
 ```
 
 Examples:
 
 ```text
-13 draft 3600 soldier
-16 draft 400 professional
-16 draft 250 construction-worker
+draft 13 soldier 3600
+draft 16 professional 400
+draft 16 construction-worker 250
 ```
 
 v0 draft coverage:
@@ -446,15 +446,15 @@ v0 draft coverage:
 Canonical form:
 
 ```text
-<id> pay <rate> <population-kind>
+pay <id> <population-kind> <rate>
 ```
 
 Examples:
 
 ```text
-38 pay 0.125 unskilled-worker
-38 pay 0.375 professional
-38 pay 0.250 soldier
+pay 38 unskilled-worker 0.125
+pay 38 professional 0.375
+pay 38 soldier 0.250
 ```
 
 Parse-time rules:
@@ -467,13 +467,13 @@ Parse-time rules:
 Canonical form:
 
 ```text
-<id> ration <percent>
+ration <id> <percent>
 ```
 
 Example:
 
 ```text
-16 ration 50%
+ration 16 50%
 ```
 
 ### Name
@@ -481,20 +481,21 @@ Example:
 Ship/colony naming:
 
 ```text
-<id> name <name>
+name ship|colony <id> <name>
 ```
 
 Planet naming:
 
 ```text
-<planet-ref> name <name>
+name planet <id> <name>
 ```
 
 Examples:
 
 ```text
-39 name "Dragonfire"
-5-12-38/2 name "Goldball Prime"
+name ship 39 "Dragonfire"
+name colony 7 "Outpost Beta"
+name planet 5 "Goldball Prime"
 ```
 
 ## Non-MVP Commands

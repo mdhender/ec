@@ -1,0 +1,14 @@
+// A sample file with intentional errors mixed with valid orders.
+// Expected: some orders accepted, some diagnostics emitted.
+
+build change 16 8 factory-6
+frobnicator 1 2
+mining change 348 18 92
+build change 1
+bombard 1 2
+ration 1 150
+name ship 39 "Unfinished
+end
+assemble 91 hyper-engine 10
+name ship 39 Dragonfire
+transfer 22 29 spy 10

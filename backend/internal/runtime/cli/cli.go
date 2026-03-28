@@ -6,6 +6,7 @@ import (
 	"github.com/mdhender/ec/internal/app"
 	deliverycli "github.com/mdhender/ec/internal/delivery/cli"
 	"github.com/mdhender/ec/internal/infra/filestore"
+	"github.com/mdhender/ec/internal/infra/ordertext"
 	"github.com/peterbourgon/ff/v4"
 )
 
@@ -54,6 +55,17 @@ func BuildCommands() []*ff.Command {
 		},
 	}
 
+	parseSvc := app.NewParseOrdersService(ordertext.NewParser())
+
+	parseCmd := &ff.Command{
+		Name:      "parse",
+		Usage:     "cli parse SUBCOMMAND ...",
+		ShortHelp: "parse and validate input files",
+		Subcommands: []*ff.Command{
+			deliverycli.CmdParseOrders(parseSvc),
+		},
+	}
+
 	testCmd := &ff.Command{
 		Name:      "test",
 		Usage:     "cli test SUBCOMMAND ...",
@@ -63,5 +75,5 @@ func BuildCommands() []*ff.Command {
 		},
 	}
 
-	return []*ff.Command{createCmd, removeCmd, showCmd, testCmd}
+	return []*ff.Command{createCmd, parseCmd, removeCmd, showCmd, testCmd}
 }

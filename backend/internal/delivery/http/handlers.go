@@ -110,6 +110,13 @@ func GetOrders(orderStore app.OrderStore) func(c *echo.Context) error {
 	}
 }
 
+// parseDiagnosticDTO is the JSON representation of a parse diagnostic.
+type parseDiagnosticDTO struct {
+	Line    int    `json:"line"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
 // PostParseOrders parses the submitted order text for the authenticated empire.
 // Requires EmpireAuthMiddleware to have validated ownership.
 func PostParseOrders(parseSvc *app.ParseOrdersService, maxBodyBytes int64) func(c *echo.Context) error {
@@ -127,11 +134,15 @@ func PostParseOrders(parseSvc *app.ParseOrdersService, maxBodyBytes int64) func(
 			return c.JSON(http.StatusInternalServerError, map[string]any{"error": "internal error"})
 		}
 
-		ok := len(result.Diagnostics) == 0
+		diags := make([]parseDiagnosticDTO, len(result.Diagnostics))
+		for i, d := range result.Diagnostics {
+			diags[i] = parseDiagnosticDTO{Line: d.Line, Code: d.Code, Message: d.Message}
+		}
+		ok := len(diags) == 0
 		return c.JSON(http.StatusOK, map[string]any{
 			"ok":             ok,
 			"accepted_count": len(result.Orders),
-			"diagnostics":    result.Diagnostics,
+			"diagnostics":    diags,
 		})
 	}
 }

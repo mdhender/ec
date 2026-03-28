@@ -110,7 +110,7 @@ func TestPostParseOrders_OK(t *testing.T) {
 		orders:      []domain.Order{stubOrder{}, stubOrder{}},
 		diagnostics: []app.ParseDiagnostic{},
 	}
-	svc := &app.ParseOrdersService{Parser: parser}
+	svc := app.NewParseOrdersService(parser)
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/api/1/orders/parse", strings.NewReader("move order text"))
@@ -152,7 +152,7 @@ func TestPostParseOrders_PartialSuccess(t *testing.T) {
 			{Line: 2, Code: "E001", Message: "unknown command"},
 		},
 	}
-	svc := &app.ParseOrdersService{Parser: parser}
+	svc := app.NewParseOrdersService(parser)
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/api/1/orders/parse", strings.NewReader("some order text"))
@@ -188,7 +188,7 @@ func TestPostParseOrders_PartialSuccess(t *testing.T) {
 }
 
 func TestPostParseOrders_TooLarge(t *testing.T) {
-	svc := &app.ParseOrdersService{Parser: &stubParser{}}
+	svc := app.NewParseOrdersService(&stubParser{})
 	const maxBytes int64 = 16
 	body := strings.Repeat("x", int(maxBytes)+1)
 
@@ -209,7 +209,7 @@ func TestPostParseOrders_TooLarge(t *testing.T) {
 
 func TestPostParseOrders_InternalError(t *testing.T) {
 	parser := &stubParser{err: errors.New("parser exploded")}
-	svc := &app.ParseOrdersService{Parser: parser}
+	svc := app.NewParseOrdersService(parser)
 
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodPost, "/api/1/orders/parse", strings.NewReader("any text"))

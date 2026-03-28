@@ -145,6 +145,13 @@ func (r NaturalResource) String() string {
 
 type TechLevel int
 
+// UnitSpec identifies a unit kind with an optional tech level.
+// Units without tech level (food, population, etc.) have TechLevel 0.
+type UnitSpec struct {
+	Kind      UnitKind
+	TechLevel TechLevel
+}
+
 type ColonyID int
 
 type Colony struct {
@@ -213,6 +220,10 @@ const (
 	// Uncategorized
 	ResearchPoint
 )
+
+func (k UnitKind) Valid() bool {
+	return k >= Unemployables && k <= ResearchPoint
+}
 
 type Inventory struct {
 	Unit                 UnitKind

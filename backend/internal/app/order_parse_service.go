@@ -4,7 +4,12 @@ package app
 
 // ParseOrdersService handles parse-time validation of submitted order text.
 type ParseOrdersService struct {
-	Parser OrderParser
+	parser OrderParser
+}
+
+// NewParseOrdersService creates a ParseOrdersService with the given parser.
+func NewParseOrdersService(parser OrderParser) *ParseOrdersService {
+	return &ParseOrdersService{parser: parser}
 }
 
 // Parse parses raw order text and returns a ParseResult.
@@ -15,7 +20,7 @@ func (s *ParseOrdersService) Parse(text string) (ParseResult, error) {
 		return ParseResult{}, nil
 	}
 
-	orders, diagnostics, err := s.Parser.Parse(text)
+	orders, diagnostics, err := s.parser.Parse(text)
 	if err != nil {
 		return ParseResult{}, err
 	}

@@ -1,0 +1,16 @@
+// A sample order file that should parse cleanly with 0 diagnostics.
+
+build change 16 8 factory-6
+mining change 348 18 92
+transfer 22 29 spy 10
+assemble 91 factory-6 54,000
+assemble 91 factory factory-6 54000 hyper-engine-1
+assemble 83 mine mine-2 25,680 92
+move 77 orbit 6               // move the scout inward
+draft 13 soldier 3,600
+pay 38 professional 0.125
+ration 16 50%
+name ship 39 "Dragonfire"
+name colony 7 "Outpost Beta"
+name planet 5 "New Terra"
+name ship 40 "Slash // Burn"  // quoted // preserved

@@ -3,6 +3,8 @@
 package ordertext_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/mdhender/ec/internal/domain"
@@ -383,5 +385,61 @@ func TestParser_RejectsUnsupportedAndMalformedLines(t *testing.T) {
 				t.Errorf("expected diagnostic code %q, got %q (message: %s)", tt.wantCode, diags[0].Code, diags[0].Message)
 			}
 		})
+	}
+}
+
+func TestParser_ValidOrderFile(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("testdata", "valid_orders.txt"))
+	if err != nil {
+		t.Fatalf("reading testdata: %v", err)
+	}
+
+	p := ordertext.NewParser()
+	orders, diags, err := p.Parse(string(data))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(diags) != 0 {
+		for _, d := range diags {
+			t.Errorf("unexpected diagnostic at line %d [%s]: %s", d.Line, d.Code, d.Message)
+		}
+	}
+	if len(orders) == 0 {
+		t.Fatalf("expected at least one order, got 0")
+	}
+	t.Logf("parsed %d orders, %d diagnostics", len(orders), len(diags))
+	for i, o := range orders {
+		t.Logf("  order[%d]: kind=%s phase=%d", i, o.Kind(), o.TurnPhase())
+	}
+}
+
+func TestParser_ErrorsFile(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("testdata", "errors_mixed.txt"))
+	if err != nil {
+		t.Fatalf("reading testdata: %v", err)
+	}
+
+	p := ordertext.NewParser()
+	orders, diags, err := p.Parse(string(data))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// errors_mixed.txt has 3 valid orders and 8 bad lines
+	wantOrders := 3
+	wantDiags := 8
+	if len(orders) != wantOrders {
+		t.Errorf("expected %d orders, got %d", wantOrders, len(orders))
+	}
+	if len(diags) != wantDiags {
+		t.Errorf("expected %d diagnostics, got %d", wantDiags, len(diags))
+	}
+
+	t.Logf("parsed %d orders, %d diagnostics", len(orders), len(diags))
+	for i, o := range orders {
+		t.Logf("  order[%d]: kind=%s phase=%d", i, o.Kind(), o.TurnPhase())
+	}
+	for i, d := range diags {
+		t.Logf("  diag[%d]: line=%d code=%s msg=%s", i, d.Line, d.Code, d.Message)
 	}
 }

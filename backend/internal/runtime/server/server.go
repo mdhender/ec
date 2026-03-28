@@ -81,7 +81,7 @@ func (s *Server) Start() error {
 
 	// Build parse service.
 	orderParser := ordertext.NewParser()
-	parseOrdersSvc := &app.ParseOrdersService{Parser: orderParser}
+	parseOrdersSvc := app.NewParseOrdersService(orderParser)
 
 	// Empire extractor bridges infra/auth into delivery without a direct import.
 	empireExtractor := func(c *echo.Context) (int, bool) {
@@ -96,20 +96,20 @@ func (s *Server) Start() error {
 		return jwtMgr.Validate(token)
 	}
 
-	deliveryhttp.AddRoutes(
-		e,
-		jwtMgr.Middleware(),
-		empireExtractor,
-		tokenValidator,
-		loginSvc,
-		fileStore,        // orderStore
-		fileStore,        // reportStore
-		fileStore,        // dashboardStore
-		s.shutdownKey,
-		s.shutdownCh,
-		maxOrderBytes,
-		parseOrdersSvc,
-	)
+	deliveryhttp.AddRoutes(deliveryhttp.RouteDeps{
+		Echo:            e,
+		JWTMiddleware:   jwtMgr.Middleware(),
+		EmpireExtractor: empireExtractor,
+		TokenValidator:  tokenValidator,
+		LoginSvc:        loginSvc,
+		OrderStore:      fileStore,
+		ReportStore:     fileStore,
+		DashboardStore:  fileStore,
+		ShutdownKey:     s.shutdownKey,
+		ShutdownCh:      s.shutdownCh,
+		MaxOrderBytes:   maxOrderBytes,
+		ParseOrdersSvc:  parseOrdersSvc,
+	})
 
 	addr := fmt.Sprintf("%s:%s", s.host, s.port)
 	srv := &http.Server{

@@ -643,3 +643,14 @@ The first visible symptom was the blog post using `;;` as the comment character.
 | 6 | Parser was missing `unterminated_quote` detection and `unexpected_end` handling entirely | DONE |
 | 7 | All player-facing command docs used ID-first syntax in every syntax block and example | DONE |
 | 8 | Developer reference doc used ID-first syntax in the command table and all per-command sections | DONE |
+| 9 | `diagnostics` JSON field serializes as `null` instead of `[]` when empty; violates API contract | DONE |
+| 10 | `parseAssembleFactory` accepts non-factory units (e.g. `mine-3`); relies on domain `Validate()` instead of parser diagnostic | DONE |
+| 11 | `ParseOrdersService.Parser` field is exported; should be unexported with a constructor | DONE |
+| 12 | `AddRoutes` takes 12 positional parameters; collapse into a `RouteDeps` struct | DONE |
+| 13 | `app.ParseDiagnostic` and `app.ParseResult` carry JSON struct tags; delivery concern leaking into app layer | DONE |
+| 14 | Domain `Validate()` checks `UnitKind > 0` / `NameTargetKind > 0` instead of bounds-checking valid enum values; add `Valid()` methods | DONE |
+| 15 | Tech level parsed and discarded by `parseUnitKind`; should be preserved in domain order types | DONE |
+| 16 | Grammar doc (`docs/order-language-v0.md`) still uses ID-first syntax in the command table and all per-command sections; parser uses command-first | DONE |
+| 17 | Grammar says all positive integers accept embedded commas (IDs, group numbers, deposit numbers, quantities); parser only strips commas in `parseQuantity`, not `parsePositiveInt` | DONE |
+| 18 | Grammar says pay rate is a decimal (`0.125`); parser uses `parseNonNegativeInt` treating it as a bare integer | DONE |
+| 19 | Grammar says ration percentage uses `%` suffix (`50%`); parser expects a bare integer | DONE |
